@@ -622,3 +622,107 @@ dialog .center-buttons {
 #numeric .snap-controls input[type='number'] {
   width: 56px;
 }
+
+dialog label.wide {
+  grid-column: span 2;
+}
+#text-options {
+  flex-wrap: wrap;
+}
+#text-options label.check {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+html[lang='ko'] [data-lang='en'],
+html[lang='en'] [data-lang='ko'] {
+  display: none !important;
+}
+#menubar .group.right {
+  margin-left: auto;
+  border-right: none;
+}
+#menubar .group.right + .dev-contact {
+  margin-left: 0;
+}
+#lang-select {
+  padding: 3px 4px;
+}
+#help-dialog {
+  width: min(860px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 32px));
+  padding: 0;
+  display: none;
+  flex-direction: column;
+}
+#help-dialog[open] {
+  display: flex;
+}
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.help-wrap {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.help-nav {
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.help-nav button {
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 7px 10px;
+}
+.help-nav button.active {
+  background: var(--accent);
+}
+.help-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 20px 16px;
+  line-height: 1.7;
+}
+.help-body li {
+  margin-bottom: 6px;
+}
+.help-body code {
+  background: #24262a;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.help-body .warn {
+  padding: 8px 10px;
+  border-left: 3px solid #c98a00;
+  background: rgba(201, 138, 0, 0.1);
+}
+.help-body a {
+  color: #7fb4ff;
+}
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  font: 12px Consolas, monospace;
+  text-align: center;
+}
+.help-body table.keys td {
+  padding: 4px 12px 4px 0;
+  vertical-align: top;
+}

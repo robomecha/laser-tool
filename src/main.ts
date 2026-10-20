@@ -19,6 +19,8 @@ import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
 import { ArrayDialogs } from './ui/array-dialogs';
 import { AiBridge } from './ai/bridge';
+import { HelpDialog } from './ui/help';
+import { getLang, Lang, onLangChange, setLang, startI18n, t } from './ui/i18n';
 import { ChatPanel } from './ai/chat';
 import { TextTool } from './ui/text-tool';
 
@@ -344,7 +346,7 @@ function booleanSelected(op: BoolOp): void {
 
 const commands: Record<string, () => void | Promise<void>> = {
   new: () => {
-    if (doc.shapes.length && !confirm('현재 작업을 지우고 새로 시작할까요?')) return;
+    if (doc.shapes.length && !confirm(t('현재 작업을 지우고 새로 시작할까요?'))) return;
     doc.load([], []);
     projectName = 'untitled';
   },
@@ -459,6 +461,10 @@ wrap.addEventListener('drop', (e) => {
 // ---------------- 단축키 ----------------
 
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'F1') {
+    e.preventDefault();
+    return void commands.help();
+  }
   const t = e.target as HTMLElement;
   if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
   const ctrl = e.ctrlKey || e.metaKey;
@@ -504,6 +510,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'f') return run('zoom-fit');
   if (k === 'c') return run('chat');
   if (k === 'g') return run('toggle-snap');
+  if (e.key === '?') return run('help');
 });
 
 // ---------------- 장비 설정 ----------------
@@ -622,7 +629,7 @@ $('btn-start').onclick = guard(async () => {
   const res = await buildJob();
   if (!res) return;
   const st = estimateJob(res.job, device.travelSpeed, fromMachine(device, 0, 0));
-  if (!confirm(`작업을 시작할까요?\n예상 시간 ${formatDuration(st.seconds)}\n\n레이저 안전 수칙(보안경, 환기, 화재 감시)을 지키세요.`)) return;
+  if (!confirm(`${t('작업을 시작할까요?')}\n${t(`예상 시간 ${formatDuration(st.seconds)}`)}\n\n${t('레이저 안전 수칙(보안경, 환기, 화재 감시)을 지키세요.')}`)) return;
   const t0 = Date.now();
   paused = false;
   if (c === 'grbl') {
@@ -785,6 +792,16 @@ function rememberAi(on: boolean): void {
   }
 }
 commands.chat = () => chat.toggle();
+const help = new HelpDialog();
+commands.help = () => help.open();
+const langSel = $<HTMLSelectElement>('lang-select');
+langSel.value = getLang();
+langSel.onchange = () => setLang(langSel.value as Lang);
+onLangChange(() => {
+  help.render();
+  renderPalette();
+});
+commands['text-on-path'] = () => textTool.openPathDialog();
 commands.ai = () => {
   const on = ai.state === 'off';
   if (on) ai.start();
@@ -807,6 +824,8 @@ refreshLaserButtons();
 requestAnimationFrame(() => view.zoomToFit());
 status('준비됨 – SVG/DXF/이미지를 끌어다 놓거나 도구로 그려보세요', true);
 log('Laser Tool v0.1 – GRBL / Ruida (USB: Chrome·Edge Web Serial)');
+
+startI18n();
 
 // 디버깅용
 (window as unknown as { laser: unknown }).laser = { doc, view, grbl, ruida, layerColor };

@@ -69,6 +69,13 @@
         <button data-cmd="chat" id="btn-chat" title="앱 안에서 AI 에게 말로 그림을 요청 (C)">💬 AI 대화</button>
         <button data-cmd="ai" id="btn-ai" title="MCP 로 Claude 등 AI 가 그림을 그리게 연결 (npm run mcp 서버 필요)">🤖 AI 연결</button>
       </div>
+      <div class="group right">
+        <button data-cmd="help" title="도움말 (F1)">❓ 도움말</button>
+        <select id="lang-select" title="화면 언어" data-no-i18n>
+          <option value="ko">🌐 한국어</option>
+          <option value="en">🌐 English</option>
+        </select>
+      </div>
       <div class="dev-contact" title="개발자 연락처">개발자 · <a href="mailto:mk1017sh@naver.com">mk1017sh@naver.com</a></div>
     </header>
 
@@ -90,9 +97,14 @@
 
     <div id="text-options" hidden>
       <strong>텍스트</strong>
-      <label>글꼴 <select id="text-font"></select></label>
-      <button id="text-font-upload" title="TTF / OTF / WOFF 글꼴 파일 불러오기">글꼴 불러오기…</button>
+      <label>글꼴 <select id="text-family"></select></label>
+      <label>스타일 <select id="text-style"></select></label>
+      <button id="text-pc-fonts" title="Windows 에 설치된 글꼴을 목록에 추가 (Chrome/Edge, 처음에 권한 요청)">🖥 PC 글꼴</button>
+      <button id="text-font-upload" title="TTF / OTF / WOFF / TTC 글꼴 파일 불러오기">글꼴 파일…</button>
       <label>크기 <input id="text-size" type="number" value="10" min="0.5" step="0.5" /> mm</label>
+      <label class="check" title="같은 글꼴의 Bold 가 있으면 사용, 없으면 합성"><input id="text-bold" type="checkbox" /> <b>굵게</b></label>
+      <label class="check" title="같은 글꼴의 Italic 이 있으면 사용, 없으면 12° 기울임"><input id="text-italic" type="checkbox" /> <i>기울임</i></label>
+      <label title="외곽선을 바깥(+)/안쪽(−)으로 두껍게·가늘게">외곽선 굵기 <input id="text-weight" type="number" value="0" step="0.05" /> mm</label>
       <label>자간 <input id="text-spacing" type="number" value="0" step="0.01" title="em 비율" /></label>
       <label>줄 간격 <input id="text-line" type="number" value="1.2" min="0.5" step="0.1" /></label>
       <label>정렬
@@ -102,6 +114,7 @@
           <option value="right">오른쪽</option>
         </select>
       </label>
+      <button data-cmd="text-on-path" title="선택한 곡선(원·선·경로)을 따라 글자 배치">〰 곡선 따라 쓰기…</button>
       <span class="hint">작업대를 클릭해 입력 · Enter 확정 · Shift+Enter 줄바꿈 · Esc 취소</span>
     </div>
 
@@ -135,25 +148,33 @@
             <button class="chat-close" title="닫기">✕</button>
           </div>
           <div class="chat-log">
-            <div class="chat-note" hidden>
-              <strong>이 대화창은 Claude API 키가 있어야 동작합니다.</strong> (API 사용량만큼 별도 요금)
-              <ul>
-                <li>
-                  <b>키 없이 쓰기:</b> Claude Desktop 채팅에서 요청하세요. 예: “laser-tool 로 원형 코스터 만들어 줘”.
-                  이 화면에 바로 그려지며 Claude 구독으로 동작합니다 (상단 <b>🤖 AI 연결</b> 이 켜져 있어야 함).
-                </li>
-                <li>
-                  <b>키로 쓰기:</b> <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
-                  에서 키를 만들고, 프로젝트 폴더의 <code>.env.local</code> 에 <code>ANTHROPIC_API_KEY=키</code> 를 넣은 뒤
-                  <code>npm run dev</code> 를 다시 실행하세요.
-                </li>
-              </ul>
+            <div class="chat-note" hidden data-no-i18n>
+              <div data-lang="ko">
+                <strong>이 대화창은 Claude API 키가 있어야 동작합니다.</strong> (API 사용량만큼 별도 요금)
+                <ul>
+                  <li><b>키 없이 쓰기:</b> Claude Desktop 채팅에서 요청하세요. 예: “laser-tool 로 원형 코스터 만들어 줘”.
+                    이 화면에 바로 그려지며 Claude 구독으로 동작합니다 (상단 <b>🤖 AI 연결</b> 이 켜져 있어야 함).</li>
+                  <li><b>키로 쓰기:</b> <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
+                    에서 키를 만들고, 프로젝트 폴더의 <code>.env.local</code> 에 <code>ANTHROPIC_API_KEY=키</code> 를 넣은 뒤
+                    <code>npm run dev</code> 를 다시 실행하세요.</li>
+                </ul>
+              </div>
+              <div data-lang="en">
+                <strong>This chat needs a Claude API key.</strong> (billed separately per API use)
+                <ul>
+                  <li><b>Without a key:</b> ask in Claude Desktop, e.g. “use laser-tool to make a round coaster”.
+                    It draws straight onto this screen using your Claude subscription (<b>🤖 AI link</b> at the top must be on).</li>
+                  <li><b>With a key:</b> create one at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>,
+                    put <code>ANTHROPIC_API_KEY=your-key</code> in <code>.env.local</code> in the project folder, and restart
+                    <code>npm run dev</code>.</li>
+                </ul>
+              </div>
             </div>
             <div class="chat-examples">
               <span>예시:</span>
-              <button data-example="지름 80mm 원형 코스터를 만들어 줘. 가운데에 '커피'를 채우기로 새기고 바깥 원은 잘라.">원형 코스터</button>
-              <button data-example="100x60mm 이름표를 둥근 모서리로 만들고 'HONG GIL DONG' 을 가운데 새겨 줘. 위쪽에 끈 구멍도 뚫어 줘.">이름표</button>
-              <button data-example="지금 그려진 도형들을 확인하고 작업대 가운데로 모아 줘.">가운데 정렬</button>
+              <button data-example="지름 80mm 원형 코스터를 만들어 줘. 가운데에 '커피'를 채우기로 새기고 바깥 원은 잘라." data-example-en="Make an 80mm round coaster. Engrave 'COFFEE' in the middle as a fill and cut the outer circle.">원형 코스터</button>
+              <button data-example="100x60mm 이름표를 둥근 모서리로 만들고 'HONG GIL DONG' 을 가운데 새겨 줘. 위쪽에 끈 구멍도 뚫어 줘." data-example-en="Make a 100x60mm name tag with rounded corners, engrave 'HONG GIL DONG' in the center and cut a strap hole at the top.">이름표</button>
+              <button data-example="지금 그려진 도형들을 확인하고 작업대 가운데로 모아 줘." data-example-en="Look at the shapes on the bed and move them all to the center.">가운데 정렬</button>
             </div>
           </div>
           <div class="chat-input">
@@ -230,6 +251,41 @@
         <span id="status-zoom"></span>
       </div>
     </footer>
+
+    <dialog id="help-dialog">
+      <div class="help-head">
+        <strong class="help-title">도움말</strong>
+        <button type="button" class="help-close">✕</button>
+      </div>
+      <div class="help-wrap" data-no-i18n>
+        <nav class="help-nav"></nav>
+        <div class="help-body"></div>
+      </div>
+    </dialog>
+
+    <dialog id="text-path-dialog">
+      <form method="dialog">
+        <h3>〰 곡선 따라 쓰기</h3>
+        <p class="hint">선택한 도형의 가장 긴 경로를 따라 글자를 배치합니다. 글꼴·굵게·기울임은 텍스트 도구 설정을 따릅니다.</p>
+        <div class="grid">
+          <label class="wide">텍스트 <input name="text" placeholder="예: HAPPY BIRTHDAY" /></label>
+          <label>글자 크기 (mm) <input name="size" type="number" min="0.5" step="0.5" /></label>
+          <label>위치 (경로의 %) <input name="position" type="number" min="0" max="100" step="1" title="원은 75% 가 위쪽, 25% 가 아래쪽" /></label>
+          <label>방향
+            <select name="side">
+              <option value="above">경로 바깥/위쪽</option>
+              <option value="below">경로 안쪽/아래쪽</option>
+            </select>
+          </label>
+          <label>경로에서 띄우기 (mm) <input name="offset" type="number" value="0" step="0.5" /></label>
+          <label class="check"><input name="reverse" type="checkbox" /> 진행 방향 반대로 (원 아래쪽 글자를 바로 읽히게)</label>
+        </div>
+        <menu>
+          <button value="cancel">취소</button>
+          <button value="ok" class="primary">배치</button>
+        </menu>
+      </form>
+    </dialog>
 
     <dialog id="grid-array-dialog">
       <form method="dialog">
@@ -317,7 +373,7 @@
 
     <input id="file-open" type="file" accept=".ltp,.json" hidden />
     <input id="file-import" type="file" accept=".svg,.dxf,.png,.jpg,.jpeg,.bmp,.gif,.webp" multiple hidden />
-    <input id="file-font" type="file" accept=".ttf,.otf,.woff" hidden />
+    <input id="file-font" type="file" accept=".ttf,.otf,.woff,.ttc" hidden />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

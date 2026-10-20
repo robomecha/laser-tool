@@ -1,5 +1,6 @@
 // 앱 내장 AI 대화창: 사용자의 말을 Claude 에 보내고(/api/chat), Claude 가 부른 도구를 이 브라우저에서 실행한다.
 import type Anthropic from '@anthropic-ai/sdk';
+import { getLang } from '../ui/i18n';
 import { AiContext, handlers } from './handlers';
 
 type Msg = Anthropic.Beta.BetaMessageParam;
@@ -11,6 +12,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_canvas_info: '작업대 확인',
   draw_shapes: '도형 그리기',
   add_text: '텍스트 추가',
+  text_on_path: '곡선 따라 쓰기',
   import_svg: 'SVG 가져오기',
   list_shapes: '도형 목록',
   transform_shapes: '도형 변형',
@@ -52,7 +54,7 @@ export class ChatPanel {
     root.querySelector<HTMLButtonElement>('.chat-close')!.onclick = () => this.toggle(false);
     for (const b of root.querySelectorAll<HTMLButtonElement>('[data-example]')) {
       b.onclick = () => {
-        this.input.value = b.dataset.example!;
+        this.input.value = (getLang() === 'en' && b.dataset.exampleEn) || b.dataset.example!;
         this.input.focus();
       };
     }

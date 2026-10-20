@@ -7,7 +7,7 @@ import { BoolOp, booleanOp, OffsetJoin, offsetPolylines } from '../core/clip';
 import { DitherMode, LayerMode, LayerSettings, PALETTE } from '../core/layers';
 import { applyToShape, ImageShape, makeVector, Shape, shapeBBox, VectorShape, worldPaths } from '../core/shapes';
 import { bboxOfPolylines } from '../core/geometry';
-import { TextAlign, textToPolylines } from '../core/text';
+import type { TextAlign } from '../core/text';
 import { estimateJob, formatDuration, jobBBox } from '../cam/job';
 import { planJob } from '../cam/planner';
 import { grayForShapes } from '../io/image-import';
@@ -121,12 +121,15 @@ export const handlers: Record<string, Handler> = {
   },
 
   async add_text(ctx, p) {
-    const font = await ctx.textTool.fontAt(Number(p.font ?? 0));
-    const paths = textToPolylines(font, String(p.text), {
+    const paths = await ctx.textTool.makeTextPaths(String(p.text), {
+      font: Number(p.font ?? 0),
       size: Number(p.size),
       align: (p.align as TextAlign) ?? 'left',
       letterSpacing: Number(p.letterSpacing ?? 0),
       lineHeight: Number(p.lineHeight ?? 1.2),
+      bold: Boolean(p.bold),
+      italic: Boolean(p.italic),
+      weight: Number(p.weight ?? 0),
     });
     if (!paths.length) throw new Error('텍스트 경로가 비어 있습니다 (글꼴에 없는 글자일 수 있습니다)');
     const b = bboxOfPolylines(paths);
@@ -145,6 +148,31 @@ export const handlers: Record<string, Handler> = {
     }
     const label = String(p.text).replace(/\s+/g, ' ').trim();
     const s = makeVector(paths, layerOf(ctx, p as { layer?: number }), `Text "${label.length > 20 ? label.slice(0, 20) + '…' : label}"`, m);
+    ctx.doc.add(s);
+    return { id: s.id, bbox: box(shapeBBox(s)) };
+  },
+
+  async text_on_path(ctx, p) {
+    const [shape] = shapesById(ctx, [String(p.id)]);
+    if (shape.type !== 'vector') throw new Error('벡터 도형(원·선·경로)만 기준 곡선으로 쓸 수 있습니다');
+    const paths = worldPaths(shape);
+    const len = (l: Polyline) => l.pts.reduce((a, q, i) => (i ? a + Math.hypot(q.x - l.pts[i - 1].x, q.y - l.pts[i - 1].y) : 0), 0);
+    const path = paths.reduce((a, b) => (len(b) > len(a) ? b : a));
+    const out = await ctx.textTool.makePathTextPaths(String(p.text), path, {
+      font: Number(p.font ?? 0),
+      size: Number(p.size),
+      letterSpacing: Number(p.letterSpacing ?? 0),
+      bold: Boolean(p.bold),
+      italic: Boolean(p.italic),
+      weight: Number(p.weight ?? 0),
+      position: Number(p.position ?? (path.closed ? 75 : 50)),
+      side: (p.side as 'above' | 'below') ?? 'above',
+      reverse: Boolean(p.reverse),
+      offset: Number(p.offset ?? 0),
+    });
+    if (!out.length) throw new Error('경로가 짧아 글자를 배치하지 못했습니다');
+    const label = String(p.text).replace(/\s+/g, ' ').trim();
+    const s = makeVector(out, layerOf(ctx, p as { layer?: number }), `Text "${label.slice(0, 20)}"`);
     ctx.doc.add(s);
     return { id: s.id, bbox: box(shapeBBox(s)) };
   },

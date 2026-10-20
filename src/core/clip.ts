@@ -76,6 +76,16 @@ export function booleanOp(op: BoolOp, groups: Polyline[][]): Polyline[] {
 }
 
 /**
+ * 비영(NonZero) 규칙으로 겹친 윤곽을 합친다. 글꼴 윤곽선처럼 획이 겹치는 경로를
+ * 레이저 채우기(짝홀 해칭)에 맞는 겹침 없는 윤곽으로 바꿀 때 쓴다.
+ */
+export function unionNonZero(lines: Polyline[]): Polyline[] {
+  const closed = toPaths(lines.filter((l) => l.closed && l.pts.length > 2));
+  if (!closed.length) return lines;
+  return fromPaths(execute(ClipperLib.ClipType.ctUnion, closed, [], ClipperLib.PolyFillType.pftNonZero));
+}
+
+/**
  * 오프셋: delta>0 바깥쪽, delta<0 안쪽 (mm).
  * 닫힌 경로는 짝홀 규칙으로 영역을 만든 뒤 확장/축소하고,
  * 열린 경로는 (delta>0 일 때) 양쪽으로 delta 만큼 두께를 준 외곽선이 된다.
