@@ -11,3 +11,6 @@ mcp-snapshot.png
 build/
 release/
 release-*/
+
+# 블로그 글 (로컬 보관용, git 에 올리지 않음)
+docs/blog/
