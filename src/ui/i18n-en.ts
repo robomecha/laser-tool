@@ -388,4 +388,16 @@ export const EN: Record<string, string> = {
   '{0}: 채우기는 닫힌 도형만 가능합니다': '{0}: fill only works on closed shapes',
   '{0}: 이미지 모드에서는 벡터 도형이 무시됩니다': '{0}: vector shapes are ignored in image mode',
   '{0}: 이미지 데이터를 불러오지 못했습니다': "{0}: couldn't load the image data",
+
+  // ---- 텍스트 수정 ----
+  '✎ 텍스트 수정': '✎ Edit text',
+  '텍스트 수정': 'Edit text',
+  '선택한 텍스트의 내용·글꼴 수정 (더블클릭 또는 Enter)': 'Edit the content and font of the selected text (double-click or Enter)',
+  '〰 곡선 텍스트 수정': '〰 Edit curve text',
+  '수정할 텍스트를 하나 선택하세요 (텍스트를 더블클릭해도 됩니다)': 'Select one text to edit (or double-click the text)',
+  '이 도형은 텍스트 원본이 없어 수정할 수 없습니다 (이전 버전에서 만들었거나 오프셋·불리언 결과)': "This shape has no text source, so it can't be edited (made by an older version, or an offset/boolean result)",
+  "글꼴 '{0}' 을(를) 찾을 수 없어 현재 글꼴로 바꿉니다 (PC 글꼴이면 [🖥 PC 글꼴] 을 먼저 누르세요)": "Font '{0}' isn't available, so the current font is used (for a PC font, press [🖥 PC fonts] first)",
+  '텍스트 수정 중 – Enter 확정 · Esc 취소': 'Editing text – Enter confirms · Esc cancels',
+  '내용이 비어 있어 원래 텍스트를 유지했습니다 (지우려면 Del)': 'The text was empty, so the original was kept (press Del to delete it)',
+  '텍스트를 수정했습니다': 'Text updated',
 };

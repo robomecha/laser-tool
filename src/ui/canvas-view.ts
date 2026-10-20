@@ -55,6 +55,10 @@ export class CanvasView {
   onTextClick: (p: Vec) => void = () => {};
   /** 입력 중인 텍스트 미리보기 (문서 좌표 폴리라인) 와 기준점 */
   textPreview: { anchor: Vec; paths: Polyline[] } | null = null;
+  /** 선택 도구로 도형을 더블클릭 (텍스트 수정 등) */
+  onShapeDoubleClick: (s: Shape) => void = () => {};
+  /** 편집 중이라 화면에서 숨길 도형 */
+  hiddenShapeId: string | null = null;
   /** 매 렌더링 후 (화면 위 HTML 오버레이 위치 갱신용) */
   onRendered: () => void = () => {};
 
@@ -86,7 +90,13 @@ export class CanvasView {
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     canvas.addEventListener('pointermove', (e) => this.onMove(e));
     canvas.addEventListener('pointerup', (e) => this.onUp(e));
-    canvas.addEventListener('dblclick', () => this.finishPoly(false));
+    canvas.addEventListener('dblclick', (e) => {
+      if (this.tool === 'line') return this.finishPoly(false);
+      if (this.tool === 'select') {
+        const hit = this.shapeAt(this.eventPos(e).w);
+        if (hit) this.onShapeDoubleClick(hit);
+      }
+    });
     canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -561,6 +571,7 @@ export class CanvasView {
   private drawShapes(px: number): void {
     const ctx = this.ctx;
     for (const s of this.doc.shapes) {
+      if (s.id === this.hiddenShapeId) continue;
       const layer = this.doc.layer(s.layer);
       if (!layer.show) continue;
       const color = layerColor(s.layer);

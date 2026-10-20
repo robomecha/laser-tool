@@ -121,7 +121,7 @@ export const handlers: Record<string, Handler> = {
   },
 
   async add_text(ctx, p) {
-    const paths = await ctx.textTool.makeTextPaths(String(p.text), {
+    const req = {
       font: Number(p.font ?? 0),
       size: Number(p.size),
       align: (p.align as TextAlign) ?? 'left',
@@ -130,7 +130,8 @@ export const handlers: Record<string, Handler> = {
       bold: Boolean(p.bold),
       italic: Boolean(p.italic),
       weight: Number(p.weight ?? 0),
-    });
+    };
+    const paths = await ctx.textTool.makeTextPaths(String(p.text), req);
     if (!paths.length) throw new Error('텍스트 경로가 비어 있습니다 (글꼴에 없는 글자일 수 있습니다)');
     const b = bboxOfPolylines(paths);
     const x = Number(p.x);
@@ -148,6 +149,8 @@ export const handlers: Record<string, Handler> = {
     }
     const label = String(p.text).replace(/\s+/g, ' ').trim();
     const s = makeVector(paths, layerOf(ctx, p as { layer?: number }), `Text "${label.length > 20 ? label.slice(0, 20) + '…' : label}"`, m);
+    s.text = ctx.textTool.metaFromRequest(String(p.text), req);
+    // 원본의 기준점(0,0)은 기준선 왼쪽이므로 정렬용 이동만큼 변환에 포함되어 있다
     ctx.doc.add(s);
     return { id: s.id, bbox: box(shapeBBox(s)) };
   },
@@ -158,7 +161,7 @@ export const handlers: Record<string, Handler> = {
     const paths = worldPaths(shape);
     const len = (l: Polyline) => l.pts.reduce((a, q, i) => (i ? a + Math.hypot(q.x - l.pts[i - 1].x, q.y - l.pts[i - 1].y) : 0), 0);
     const path = paths.reduce((a, b) => (len(b) > len(a) ? b : a));
-    const out = await ctx.textTool.makePathTextPaths(String(p.text), path, {
+    const req = {
       font: Number(p.font ?? 0),
       size: Number(p.size),
       letterSpacing: Number(p.letterSpacing ?? 0),
@@ -169,12 +172,48 @@ export const handlers: Record<string, Handler> = {
       side: (p.side as 'above' | 'below') ?? 'above',
       reverse: Boolean(p.reverse),
       offset: Number(p.offset ?? 0),
-    });
+    };
+    const out = await ctx.textTool.makePathTextPaths(String(p.text), path, req);
     if (!out.length) throw new Error('경로가 짧아 글자를 배치하지 못했습니다');
     const label = String(p.text).replace(/\s+/g, ' ').trim();
     const s = makeVector(out, layerOf(ctx, p as { layer?: number }), `Text "${label.slice(0, 20)}"`);
+    s.text = ctx.textTool.metaFromRequest(String(p.text), req, { line: path, position: req.position, side: req.side, reverse: req.reverse, offset: req.offset });
     ctx.doc.add(s);
     return { id: s.id, bbox: box(shapeBBox(s)) };
+  },
+
+  async edit_text(ctx, p) {
+    const [shape] = shapesById(ctx, [String(p.id)]);
+    if (shape.type !== 'vector' || !shape.text) throw new Error('텍스트 원본이 있는 도형만 수정할 수 있습니다 (add_text / text_on_path 로 만든 텍스트)');
+    const old = shape.text;
+    const font = p.font !== undefined ? ctx.textTool.fontInfo(Number(p.font)) : null;
+    if (p.font !== undefined && !font) throw new Error(`글꼴 ${p.font} 이(가) 없습니다`);
+    const pick = <T>(k: string, v: T): T => (p[k] !== undefined ? (p[k] as T) : v);
+    const meta = {
+      ...old,
+      ...(font ?? {}),
+      content: pick('text', old.content),
+      size: pick('size', old.size),
+      letterSpacing: pick('letterSpacing', old.letterSpacing),
+      lineHeight: pick('lineHeight', old.lineHeight),
+      align: pick('align', old.align),
+      bold: pick('bold', old.bold),
+      italic: pick('italic', old.italic),
+      weight: pick('weight', old.weight),
+      ...(old.path
+        ? {
+            path: {
+              ...old.path,
+              position: pick('position', old.path.position),
+              side: pick('side', old.path.side),
+              reverse: pick('reverse', old.path.reverse),
+              offset: pick('offset', old.path.offset),
+            },
+          }
+        : {}),
+    };
+    await ctx.textTool.replaceText(shape, meta);
+    return { id: shape.id, text: meta.content, bbox: box(shapeBBox(shape)) };
   },
 
   import_svg(ctx, p) {
@@ -200,6 +239,7 @@ export const handlers: Record<string, Handler> = {
     return ctx.doc.shapes.map((s) => ({
       id: s.id, name: s.name, type: s.type, layer: s.layer, mode: ctx.doc.layer(s.layer).mode, bbox: box(shapeBBox(s)),
       ...(s.type === 'vector' ? { paths: s.paths.length, closed: s.paths.every((l) => l.closed) } : {}),
+      ...(s.type === 'vector' && s.text ? { text: s.text.content, font: `${s.text.family} ${s.text.style}`, size: s.text.size, onPath: Boolean(s.text.path) } : {}),
     }));
   },
 

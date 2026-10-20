@@ -425,6 +425,21 @@ document.querySelectorAll<HTMLButtonElement>('[data-cmd]').forEach((b) => {
   b.onclick = () => void commands[b.dataset.cmd!]?.();
 });
 
+/** 선택된 텍스트 도형 하나 (수정 대상) */
+function selectedText(): VectorShape | null {
+  const sel = doc.selected();
+  return sel.length === 1 && sel[0].type === 'vector' && sel[0].text ? sel[0] : null;
+}
+
+function editText(s: VectorShape): void {
+  setTool('text');
+  textTool.edit(s);
+}
+
+view.onShapeDoubleClick = (s) => {
+  if (s.type === 'vector' && s.text) editText(s);
+};
+
 function setTool(t: Tool): void {
   view.setTool(t);
   textTool.setActive(t === 'text');
@@ -496,7 +511,10 @@ window.addEventListener('keydown', (e) => {
     view.cancelTool();
     return;
   }
-  if (e.key === 'Enter') return view.finishPoly(false);
+  if (e.key === 'Enter') {
+    if (view.tool === 'select' && selectedText()) return run('edit-text');
+    return view.finishPoly(false);
+  }
   if (e.key.startsWith('Arrow') && doc.selection.size) {
     e.preventDefault();
     const step = e.shiftKey ? 10 : 1;
@@ -791,6 +809,11 @@ function rememberAi(on: boolean): void {
     /* 무시 */
   }
 }
+commands['edit-text'] = () => {
+  const s = selectedText();
+  if (!s) return status('수정할 텍스트를 하나 선택하세요 (텍스트를 더블클릭해도 됩니다)');
+  editText(s);
+};
 commands.chat = () => chat.toggle();
 const help = new HelpDialog();
 commands.help = () => help.open();

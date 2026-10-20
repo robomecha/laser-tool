@@ -3,8 +3,8 @@
 import nanumRegularUrl from '@expo-google-fonts/nanum-gothic/400Regular/NanumGothic_400Regular.ttf?url';
 import nanumBoldUrl from '@expo-google-fonts/nanum-gothic/700Bold/NanumGothic_700Bold.ttf?url';
 import { LaserDocument } from '../core/document';
-import { Polyline, translate, transformPolyline, Vec } from '../core/geometry';
-import { makeVector, VectorShape, worldPaths } from '../core/shapes';
+import { apply, Mat, Polyline, translate, transformPolyline, Vec } from '../core/geometry';
+import { hitTest, makeVector, TextMeta, VectorShape, worldPaths } from '../core/shapes';
 import { TextAlign, textToPolylines } from '../core/text';
 import { styleTextPaths, SYNTH_BOLD_RATIO, SYNTH_ITALIC_DEG, textOnPath, TextOnPathOptions } from '../core/text-style';
 import { Font, fontFamilyStyle, parseFont } from '../io/font';
@@ -51,6 +51,8 @@ export class TextTool {
     { family: '나눔고딕', style: 'Bold', source: 'builtin', url: nanumBoldUrl },
   ];
   private anchor: Vec | null = null;
+  /** 수정 중인 기존 텍스트 도형 */
+  private editTarget: VectorShape | null = null;
   private input = $<HTMLTextAreaElement>('text-input');
   private familySel = $<HTMLSelectElement>('text-family');
   private styleSel = $<HTMLSelectElement>('text-style');
@@ -280,10 +282,144 @@ export class TextTool {
     return styleTextPaths(raw, { weight });
   }
 
+  // ---------------- 텍스트 원본 (다시 편집용) ----------------
+
+  /** 화면 설정 → 도형에 저장할 원본 정보 */
+  private metaFromUI(content: string): TextMeta {
+    const r = this.request();
+    return {
+      content,
+      family: this.familySel.value,
+      style: this.styleSel.value,
+      size: r.size,
+      letterSpacing: r.letterSpacing ?? 0,
+      lineHeight: r.lineHeight ?? 1.2,
+      align: r.align ?? 'left',
+      bold: Boolean(r.bold),
+      italic: Boolean(r.italic),
+      weight: r.weight ?? 0,
+    };
+  }
+
+  /** 도형의 원본 정보를 텍스트 도구 화면에 되살린다 */
+  private applyMetaToUI(m: TextMeta): void {
+    if (this.families().includes(m.family)) {
+      this.familySel.value = m.family;
+      this.renderStyles();
+      if (this.fonts.some((f) => f.family === m.family && f.style === m.style)) this.styleSel.value = m.style;
+    } else {
+      this.onStatus(`글꼴 '${m.family}' 을(를) 찾을 수 없어 현재 글꼴로 바꿉니다 (PC 글꼴이면 [🖥 PC 글꼴] 을 먼저 누르세요)`);
+    }
+    $<HTMLInputElement>('text-size').value = String(m.size);
+    $<HTMLInputElement>('text-spacing').value = String(m.letterSpacing);
+    $<HTMLInputElement>('text-line').value = String(m.lineHeight);
+    $<HTMLSelectElement>('text-align').value = m.align;
+    $<HTMLInputElement>('text-bold').checked = m.bold;
+    $<HTMLInputElement>('text-italic').checked = m.italic;
+    $<HTMLInputElement>('text-weight').value = String(m.weight);
+  }
+
+  /** 글꼴 요청 → 원본 정보 (AI 도구가 만든 텍스트도 나중에 수정할 수 있게) */
+  metaFromRequest(content: string, r: TextRequest, path?: TextMeta['path']): TextMeta {
+    const f = this.fonts[r.font ?? this.selectedIndex()] ?? this.fonts[0];
+    return {
+      content,
+      family: f.family,
+      style: f.style,
+      size: r.size,
+      letterSpacing: r.letterSpacing ?? 0,
+      lineHeight: r.lineHeight ?? 1.2,
+      align: r.align ?? 'left',
+      bold: Boolean(r.bold),
+      italic: Boolean(r.italic),
+      weight: r.weight ?? 0,
+      ...(path ? { path } : {}),
+    };
+  }
+
+  /** 글꼴 목록 index (AI 도구) → 가족·스타일 */
+  fontInfo(index: number): { family: string; style: string } | null {
+    const f = this.fonts[index];
+    return f ? { family: f.family, style: f.style } : null;
+  }
+
+  /** 원본 정보 → 글꼴 요청 (글꼴이 없으면 현재 선택 글꼴) */
+  private requestFromMeta(m: TextMeta): TextRequest {
+    const i = this.fonts.findIndex((f) => f.family === m.family && f.style === m.style);
+    const j = i >= 0 ? i : this.fonts.findIndex((f) => f.family === m.family);
+    return {
+      font: j >= 0 ? j : this.selectedIndex(),
+      size: m.size,
+      letterSpacing: m.letterSpacing,
+      lineHeight: m.lineHeight,
+      align: m.align,
+      bold: m.bold,
+      italic: m.italic,
+      weight: m.weight,
+    };
+  }
+
+  /** 원본 정보로 윤곽선을 다시 만든다 (일반 텍스트는 로컬 좌표, 곡선 텍스트는 만들 때의 문서 좌표) */
+  async buildFromMeta(m: TextMeta): Promise<Polyline[]> {
+    const r = this.requestFromMeta(m);
+    if (m.path) return this.makePathTextPaths(m.content, m.path.line, { ...r, ...m.path });
+    return this.makeTextPaths(m.content, r);
+  }
+
+  /** 텍스트 도형을 새 원본으로 바꾼다 (위치·회전·크기 변환은 유지). AI 도구에서도 쓴다 */
+  async replaceText(shape: VectorShape, meta: TextMeta): Promise<void> {
+    const paths = await this.buildFromMeta(meta);
+    if (!paths.length) throw new Error('텍스트 경로가 비어 있습니다 (글꼴에 없는 글자일 수 있습니다)');
+    this.doc.checkpoint();
+    shape.paths = paths;
+    shape.text = meta;
+    shape.name = this.label(meta.content);
+    this.doc.emit('all');
+  }
+
+  /** 텍스트 도형 편집 시작 (선택 도구 더블클릭, [✎ 텍스트 수정], 텍스트 도구로 기존 글자 클릭) */
+  edit(shape: VectorShape): void {
+    const meta = shape.text;
+    if (!meta) {
+      this.onStatus('이 도형은 텍스트 원본이 없어 수정할 수 없습니다 (이전 버전에서 만들었거나 오프셋·불리언 결과)');
+      return;
+    }
+    this.applyMetaToUI(meta);
+    if (meta.path) {
+      this.openPathDialog(shape);
+      return;
+    }
+    this.close();
+    this.editTarget = shape;
+    this.anchor = apply(shape.transform, { x: 0, y: 0 });
+    this.input.value = meta.content;
+    this.input.hidden = false;
+    this.view.hiddenShapeId = shape.id;
+    this.placeInput();
+    this.updatePreview();
+    setTimeout(() => {
+      this.input.focus();
+      this.input.select();
+    }, 0);
+    this.onStatus('텍스트 수정 중 – Enter 확정 · Esc 취소');
+  }
+
   // ---------------- 작업대 입력 ----------------
+
+  private textShapeAt(p: Vec): VectorShape | null {
+    for (let i = this.doc.shapes.length - 1; i >= 0; i--) {
+      const s = this.doc.shapes[i];
+      if (s.type === 'vector' && s.text && !s.text.path && this.doc.layer(s.layer).show && hitTest(s, p, 3 / this.view.zoom)) return s;
+    }
+    return null;
+  }
 
   private async begin(p: Vec): Promise<void> {
     if (this.anchor && this.input.value.trim()) await this.commit();
+    else this.close();
+    // 기존 텍스트를 클릭하면 그 텍스트를 수정
+    const hit = this.textShapeAt(p);
+    if (hit) return this.edit(hit);
     this.anchor = p;
     this.input.value = '';
     this.input.hidden = false;
@@ -291,6 +427,11 @@ export class TextTool {
     this.updatePreview();
     // 포인터 이벤트가 끝난 뒤 포커스 (캔버스가 포커스를 가져가지 않도록)
     setTimeout(() => this.input.focus(), 0);
+  }
+
+  /** 미리보기·입력 상자 위치용 변환 (수정 중이면 도형의 변환 그대로) */
+  private previewMatrix(): Mat {
+    return this.editTarget ? this.editTarget.transform : translate(this.anchor!.x, this.anchor!.y);
   }
 
   private placeInput(): void {
@@ -315,7 +456,7 @@ export class TextTool {
       return;
     }
     if (token !== this.loadToken || this.anchor !== anchor) return;
-    const m = translate(anchor.x, anchor.y);
+    const m = this.previewMatrix();
     this.view.textPreview = { anchor, paths: paths.map((l) => transformPolyline(m, l)) };
     this.placeInput();
     this.view.requestRender();
@@ -328,13 +469,27 @@ export class TextTool {
 
   async commit(): Promise<void> {
     const anchor = this.anchor;
+    const editing = this.editTarget;
     const text = this.input.value;
+    const meta = this.metaFromUI(text);
     this.close();
-    if (!anchor || !text.trim()) return;
+    if (!anchor) return;
+    if (!text.trim()) {
+      if (editing) this.onStatus('내용이 비어 있어 원래 텍스트를 유지했습니다 (지우려면 Del)');
+      return;
+    }
     try {
+      if (editing) {
+        await this.replaceText(editing, meta);
+        this.doc.select([editing.id]);
+        this.onStatus('텍스트를 수정했습니다');
+        return;
+      }
       const paths = await this.makeTextPaths(text, this.request());
       if (!paths.length) return;
-      this.doc.add(makeVector(paths, this.doc.currentLayer, this.label(text), translate(anchor.x, anchor.y)));
+      const s = makeVector(paths, this.doc.currentLayer, this.label(text), translate(anchor.x, anchor.y));
+      s.text = meta;
+      this.doc.add(s);
       this.onDone();
     } catch (e) {
       this.onStatus((e as Error).message);
@@ -347,6 +502,8 @@ export class TextTool {
 
   private close(): void {
     this.anchor = null;
+    this.editTarget = null;
+    this.view.hiddenShapeId = null;
     this.loadToken++;
     this.input.hidden = true;
     this.input.blur();
@@ -366,26 +523,40 @@ export class TextTool {
     return { shape: s, path };
   }
 
-  openPathDialog(): void {
-    const target = this.pathTarget();
+  /** editShape 를 주면 그 곡선 텍스트를 수정 */
+  openPathDialog(editShape?: VectorShape): void {
+    const em = editShape?.text?.path ? editShape.text : null;
+    const target = em ? { path: em.path!.line } : this.pathTarget();
     if (!target) {
       this.onStatus('먼저 선택 도구로 글자를 올릴 곡선(원, 선, 경로)을 선택하세요');
       return;
     }
     const dlg = $<HTMLDialogElement>('text-path-dialog');
     const f = dlg.querySelector('form')!;
-    const val = (n: string) => (f.elements.namedItem(n) as HTMLInputElement);
-    const sizeIn = val('size');
-    if (!sizeIn.value) sizeIn.value = String(this.request().size);
-    if (!val('position').value) val('position').value = target.path.closed ? '75' : '50';
-    const opts = () => ({
-      ...this.request(),
-      size: Math.max(0.1, Number(sizeIn.value) || 10),
+    const val = (n: string) => f.elements.namedItem(n) as HTMLInputElement;
+    const sideSel = f.elements.namedItem('side') as HTMLSelectElement;
+    if (em) {
+      val('text').value = em.content;
+      val('size').value = String(em.size);
+      val('position').value = String(em.path!.position);
+      sideSel.value = em.path!.side;
+      val('reverse').checked = em.path!.reverse;
+      val('offset').value = String(em.path!.offset);
+    } else {
+      if (!val('size').value) val('size').value = String(this.request().size);
+      if (!val('position').value) val('position').value = target.path.closed ? '75' : '50';
+    }
+    dlg.querySelector('h3')!.textContent = em ? '〰 곡선 텍스트 수정' : '〰 곡선 따라 쓰기';
+    const place = () => ({
       position: Number(val('position').value) || 0,
-      side: (val('side') as unknown as HTMLSelectElement).value as 'above' | 'below',
+      side: sideSel.value as 'above' | 'below',
       reverse: val('reverse').checked,
       offset: Number(val('offset').value) || 0,
     });
+    const opts = () => ({ ...this.request(), size: Math.max(0.1, Number(val('size').value) || 10), ...place() });
+    // 수정 중이면 도형을 숨기고, 도형을 옮긴 변환을 미리보기에 그대로 적용
+    const m: Mat = editShape?.transform ?? [1, 0, 0, 1, 0, 0];
+    if (editShape) this.view.hiddenShapeId = editShape.id;
     let token = 0;
     const preview = async () => {
       const my = ++token;
@@ -393,7 +564,7 @@ export class TextTool {
       try {
         const paths = text.trim() ? await this.makePathTextPaths(text, target.path, opts()) : [];
         if (my !== token) return;
-        this.view.textPreview = { anchor: target.path.pts[0], paths };
+        this.view.textPreview = { anchor: apply(m, target.path.pts[0]), paths: paths.map((l) => transformPolyline(m, l)) };
         this.view.requestRender();
       } catch (e) {
         this.onStatus((e as Error).message);
@@ -404,14 +575,23 @@ export class TextTool {
     dlg.onclose = async () => {
       token++;
       this.view.textPreview = null;
+      this.view.hiddenShapeId = null;
       this.view.requestRender();
       if (dlg.returnValue !== 'ok') return;
       const text = val('text').value;
       if (!text.trim()) return;
+      const meta: TextMeta = { ...this.metaFromUI(text), size: opts().size, path: { line: target.path, ...place() } };
       try {
-        const paths = await this.makePathTextPaths(text, target.path, opts());
+        if (editShape) {
+          await this.replaceText(editShape, meta);
+          this.onStatus('텍스트를 수정했습니다');
+          return;
+        }
+        const paths = await this.buildFromMeta(meta);
         if (!paths.length) return this.onStatus('경로가 짧아 글자를 배치하지 못했습니다');
-        this.doc.add(makeVector(paths, this.doc.currentLayer, this.label(text)));
+        const s = makeVector(paths, this.doc.currentLayer, this.label(text));
+        s.text = meta;
+        this.doc.add(s);
         this.onStatus('곡선을 따라 텍스트를 배치했습니다');
       } catch (e) {
         this.onStatus((e as Error).message);

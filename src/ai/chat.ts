@@ -13,6 +13,7 @@ const TOOL_LABEL: Record<string, string> = {
   draw_shapes: '도형 그리기',
   add_text: '텍스트 추가',
   text_on_path: '곡선 따라 쓰기',
+  edit_text: '텍스트 수정',
   import_svg: 'SVG 가져오기',
   list_shapes: '도형 목록',
   transform_shapes: '도형 변형',

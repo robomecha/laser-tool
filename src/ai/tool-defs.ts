@@ -77,6 +77,26 @@ export const TOOL_DEFS: ToolDef[] = [
     },
   },
   {
+    name: 'edit_text',
+    description: '이미 만든 텍스트 도형(add_text / text_on_path)의 내용·글꼴·크기·스타일을 바꾼다. 준 항목만 바뀌고 위치·회전은 유지된다.',
+    shape: {
+      id: z.string().describe('텍스트 도형 id (list_shapes 의 text 항목이 있는 도형)'),
+      text: z.string().min(1).optional(),
+      size: z.number().positive().optional(),
+      font: z.number().int().min(0).optional().describe('get_canvas_info 의 fonts 인덱스'),
+      bold: z.boolean().optional(),
+      italic: z.boolean().optional(),
+      weight: z.number().optional(),
+      letterSpacing: z.number().optional(),
+      lineHeight: z.number().positive().optional(),
+      align: z.enum(['left', 'center', 'right']).optional(),
+      position: z.number().min(0).max(100).optional().describe('곡선 텍스트만'),
+      side: z.enum(['above', 'below']).optional().describe('곡선 텍스트만'),
+      reverse: z.boolean().optional().describe('곡선 텍스트만'),
+      offset: z.number().optional().describe('곡선 텍스트만'),
+    },
+  },
+  {
     name: 'import_svg',
     description: 'SVG 문서를 가져온다. 선 색은 가장 가까운 팔레트 레이어로 배정되며 layer 를 주면 모두 그 레이어로. x/y/width/height 를 주면 그 영역에 비율 유지로 맞춘다.',
     shape: {

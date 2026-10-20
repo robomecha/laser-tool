@@ -20,10 +20,28 @@ interface BaseShape {
   transform: Mat;
 }
 
+/** 텍스트 도형의 원본 (다시 편집할 수 있게 경로와 함께 저장) */
+export interface TextMeta {
+  content: string;
+  family: string;
+  style: string;
+  size: number;
+  letterSpacing: number;
+  lineHeight: number;
+  align: 'left' | 'center' | 'right';
+  bold: boolean;
+  italic: boolean;
+  weight: number;
+  /** 곡선 따라 쓰기: 기준 곡선(만들 때의 문서 좌표)과 배치 옵션 */
+  path?: { line: Polyline; position: number; side: 'above' | 'below'; reverse: boolean; offset: number };
+}
+
 /** 벡터 도형: 곡선은 가져올 때 폴리라인으로 평탄화해 저장한다. */
 export interface VectorShape extends BaseShape {
   type: 'vector';
   paths: Polyline[];
+  /** 텍스트로 만든 도형이면 원본 글자와 설정 */
+  text?: TextMeta;
 }
 
 /** 비트맵 이미지: 로컬 좌표 (0,0)~(w,h) mm 영역에 그려진다. */

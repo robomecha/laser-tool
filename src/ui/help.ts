@@ -65,6 +65,7 @@ const SECTIONS: Section[] = [
 <li><b>글꼴</b>: 내장 나눔고딕, <b>🖥 PC 글꼴</b>(Windows 에 설치된 글꼴 – Chrome/Edge, 처음에 권한 허용), <b>글꼴 파일…</b>(TTF·OTF·WOFF·TTC).</li>
 <li><b>굵게 / 기울임</b>: 같은 글꼴에 Bold·Italic 이 있으면 그것을 쓰고, 없으면 합성합니다. <b>외곽선 굵기</b>로 획을 더 두껍게(+)·가늘게(−).</li>
 <li><b>곡선 따라 쓰기</b>: 선택 도구로 원·선·경로를 선택 → 텍스트 도구 막대의 <b>〰 곡선 따라 쓰기…</b>. 원은 위치 75% 가 위쪽, 아래쪽 글자는 "안쪽" + "반대 방향".</li>
+<li><b>수정</b>: 텍스트를 <b>더블클릭</b>하거나, 선택하고 ${kbd('Enter')} 또는 <b>✎ 텍스트 수정</b>. 텍스트 도구로 기존 글자를 클릭해도 됩니다. 내용·글꼴·크기·스타일을 바꿔도 위치·회전은 유지됩니다.</li>
 <li>채우기(각인)하려면 텍스트를 <b>채우기</b> 모드 레이어에 두세요.</li>
 </ul>`,
       en: `<ul>
@@ -72,6 +73,7 @@ const SECTIONS: Section[] = [
 <li><b>Fonts</b>: built-in Nanum Gothic, <b>🖥 PC fonts</b> (fonts installed in Windows – Chrome/Edge, allow the permission the first time), <b>Font file…</b> (TTF, OTF, WOFF, TTC).</li>
 <li><b>Bold / Italic</b>: uses the font's own Bold/Italic when it has one, otherwise synthesizes it. <b>Outline weight</b> makes strokes thicker (+) or thinner (−).</li>
 <li><b>Text on a curve</b>: select a circle, line or path with the Select tool → <b>〰 Text on curve…</b> in the text bar. On a circle, position 75% is the top; for text at the bottom use "inside" + "reverse".</li>
+<li><b>Editing</b>: <b>double-click</b> the text, or select it and press ${kbd('Enter')} or <b>✎ Edit text</b>. Clicking existing text with the Text tool works too. Changing content, font, size or style keeps its position and rotation.</li>
 <li>To engrave (fill) text, put it on a layer in <b>Fill</b> mode.</li>
 </ul>`,
     },
