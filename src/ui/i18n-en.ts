@@ -414,4 +414,8 @@ export const EN: Record<string, string> = {
   '별의 안쪽 꼭짓점 반지름 (바깥 대비 %)': 'Inner point radius of the star (% of the outer radius)',
   '안쪽 비율': 'Inner ratio',
   '중심에서 바깥으로 드래그 · Shift: 드래그 방향으로 회전 · 크기는 위쪽 W/H 로 조정': 'Drag outward from the center · Shift: rotate toward the drag · fine-tune size with W/H above',
+
+  // ---- 실시간 치수 ----
+  '변': 'side',
+  '전체': 'total',
 };

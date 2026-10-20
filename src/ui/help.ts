@@ -43,6 +43,7 @@ const SECTIONS: Section[] = [
 <li><b>편집</b>: 잘라내기·복사·붙여넣기·복제·삭제, 정렬, 반전, 90° 회전, 작업대 중앙.</li>
 <li><b>배열</b>: ▦ 격자 배열(행·열, 간격 또는 중심 거리), ◌ 원형 배열(개수, 각도, 회전 중심, 복사본 회전).</li>
 <li><b>오프셋 / 불리언</b>: 선택 도형의 바깥(+)·안쪽(−) 윤곽 만들기, 합치기·빼기(처음 선택한 도형에서 나머지를 뺌)·교집합.</li>
+<li><b>실시간 치수</b>: 그리는 동안 커서 옆에 mm 치수가 나옵니다 (사각형·타원 가로×세로, 선 길이·각도·전체 길이, 정다각형 반지름·지름·변 길이, 이동 ΔX·ΔY, 크기 W×H, 회전 각도).</li>
 <li><b>스냅</b>: 상단 오른쪽에서 눈금 간격(1mm 단위), 스냅 켜기/끄기(${kbd('G')})와 간격, 점 스냅(꼭짓점·중심에 붙기)을 설정합니다.</li>
 </ul>`,
       en: `<ul>
@@ -52,6 +53,7 @@ const SECTIONS: Section[] = [
 <li><b>Edit</b>: cut, copy, paste, duplicate, delete, align, mirror, rotate 90°, center on bed.</li>
 <li><b>Arrays</b>: ▦ grid array (rows and columns, gap or center pitch), ◌ circular array (count, angle, center, rotate copies).</li>
 <li><b>Offset / Boolean</b>: make outward (+) or inward (−) outlines; union, subtract (removes the others from the first-selected shape) and intersect.</li>
+<li><b>Live dimensions</b>: while drawing, mm dimensions follow the cursor (rectangle/ellipse width × height, line length, angle and total, polygon radius, diameter and side, move ΔX ΔY, resize W × H, rotation angle).</li>
 <li><b>Snap</b>: at the top right set the grid spacing (1mm steps), snap on/off (${kbd('G')}) and step, and point snap (sticks to corners and centers).</li>
 </ul>`,
     },

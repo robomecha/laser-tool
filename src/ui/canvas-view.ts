@@ -22,6 +22,7 @@ import { layerColor } from '../core/layers';
 import { makeVector, shapeBBox, hitTest, Shape, worldPaths } from '../core/shapes';
 import { Job } from '../cam/job';
 import { cachedImageEl } from '../io/image-import';
+import { t } from './i18n';
 
 export type Tool = 'select' | 'line' | 'rect' | 'ellipse' | 'polygon' | 'text' | 'pan';
 
@@ -29,9 +30,9 @@ type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rot';
 
 type Drag =
   | { kind: 'pan'; sx: number; sy: number; px: number; py: number }
-  | { kind: 'move'; start: Vec; orig: Map<string, Mat>; moved: boolean; box: BBox }
+  | { kind: 'move'; start: Vec; orig: Map<string, Mat>; moved: boolean; box: BBox; dx?: number; dy?: number }
   | { kind: 'scale'; handle: Handle; box: BBox; orig: Map<string, Mat> }
-  | { kind: 'rotate'; center: Vec; a0: number; orig: Map<string, Mat> }
+  | { kind: 'rotate'; center: Vec; a0: number; orig: Map<string, Mat>; angle?: number }
   | { kind: 'band'; start: Vec; cur: Vec; additive: boolean }
   | { kind: 'shape'; tool: 'rect' | 'ellipse' | 'polygon'; start: Vec; cur: Vec; free?: boolean };
 
@@ -84,6 +85,7 @@ export class CanvasView {
   private drag: Drag | null = null;
   private poly: Vec[] = [];
   private cursor: Vec = { x: 0, y: 0 };
+  private cursorScreen: Vec = { x: 0, y: 0 };
   private spaceDown = false;
   private dpr = 1;
   private raf = 0;
@@ -370,6 +372,7 @@ export class CanvasView {
 
   private onMove(e: PointerEvent): void {
     const { s } = this.eventPos(e);
+    this.cursorScreen = s;
     let { w } = this.eventPos(e);
     this.cursor = w;
     this.onCursor(w);
@@ -412,6 +415,8 @@ export class CanvasView {
           this.doc.checkpoint();
           d.moved = true;
         }
+        d.dx = dx;
+        d.dy = dy;
         this.applyOrig(d.orig, translate(dx, dy));
         break;
       }
@@ -440,6 +445,7 @@ export class CanvasView {
       case 'rotate': {
         let a = Math.atan2(w.y - d.center.y, w.x - d.center.x) - d.a0;
         if (e.shiftKey) a = Math.round(a / (Math.PI / 12)) * (Math.PI / 12);
+        d.angle = a;
         this.applyOrig(d.orig, about(rotate(a), d.center.x, d.center.y));
         break;
       }
@@ -534,6 +540,7 @@ export class CanvasView {
     // 화면 좌표 오버레이
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (!this.previewJob) this.drawSelection();
+    if (!this.previewJob) this.drawLiveDims();
     this.onRendered();
   }
 
@@ -640,6 +647,84 @@ export class CanvasView {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
+    }
+  }
+
+  // ---------- 실시간 치수 ----------
+
+  private dimLabel(text: string, x: number, y: number, align: 'center' | 'left' = 'left'): void {
+    const ctx = this.ctx;
+    ctx.font = '12px "Segoe UI", "Malgun Gothic", sans-serif';
+    const w = ctx.measureText(text).width + 12;
+    const h = 20;
+    let lx = align === 'center' ? x - w / 2 : x;
+    let ly = y - h / 2;
+    // 캔버스 밖으로 나가지 않게
+    lx = Math.max(2, Math.min(this.canvas.clientWidth - w - 2, lx));
+    ly = Math.max(2, Math.min(this.canvas.clientHeight - h - 2, ly));
+    ctx.fillStyle = 'rgba(20, 22, 26, 0.88)';
+    ctx.strokeStyle = 'rgba(61, 139, 253, 0.9)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(lx, ly, w, h, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillText(text, lx + 6, ly + h / 2 + 0.5);
+  }
+
+  /** 그리기·이동·크기·회전 중 mm 치수를 커서 옆과 도형 가장자리에 표시 */
+  private drawLiveDims(): void {
+    const f = (v: number) => (Math.abs(v) < 0.005 ? '0.0' : v.toFixed(1));
+    const tip = (text: string) => this.dimLabel(text, this.cursorScreen.x + 18, this.cursorScreen.y + 22);
+    const d = this.drag;
+    if (d?.kind === 'shape') {
+      if (d.tool === 'polygon') {
+        const r = Math.hypot(d.cur.x - d.start.x, d.cur.y - d.start.y);
+        if (r < 0.05) return;
+        const n = this.polygonSides;
+        const side = 2 * r * Math.sin(Math.PI / n);
+        const deg = d.free ? `  ${f((-Math.atan2(d.cur.y - d.start.y, d.cur.x - d.start.x) * 180) / Math.PI)}°` : '';
+        tip(`R ${f(r)}  ⌀ ${f(2 * r)}  ${t('변')} ${f(side)} mm${deg}`);
+        return;
+      }
+      const w = Math.abs(d.cur.x - d.start.x);
+      const h = Math.abs(d.cur.y - d.start.y);
+      if (w < 0.05 && h < 0.05) return;
+      const a = this.toScreen({ x: Math.min(d.start.x, d.cur.x), y: Math.min(d.start.y, d.cur.y) });
+      const c = this.toScreen({ x: Math.max(d.start.x, d.cur.x), y: Math.max(d.start.y, d.cur.y) });
+      // 위쪽 가장자리에 폭, 왼쪽 가장자리에 높이
+      if (c.x - a.x > 40) this.dimLabel(f(w), (a.x + c.x) / 2, a.y - 14, 'center');
+      if (c.y - a.y > 30) this.dimLabel(f(h), a.x - 8 - 30, (a.y + c.y) / 2);
+      const circle = d.tool === 'ellipse' && Math.abs(w - h) < 1e-6;
+      tip(circle ? `⌀ ${f(w)} mm` : `${f(w)} × ${f(h)} mm`);
+      return;
+    }
+    if (d?.kind === 'move' && d.moved) {
+      tip(`ΔX ${f(d.dx ?? 0)}  ΔY ${f(d.dy ?? 0)} mm`);
+      return;
+    }
+    if (d?.kind === 'scale') {
+      const b = this.doc.selectionBBox();
+      if (!isEmptyBBox(b)) tip(`${f(b.maxX - b.minX)} × ${f(b.maxY - b.minY)} mm`);
+      return;
+    }
+    if (d?.kind === 'rotate') {
+      // 화면 기준 반시계가 + (Y 가 아래라 부호 반대)
+      tip(`${f((-(d.angle ?? 0) * 180) / Math.PI)}°`);
+      return;
+    }
+    if (this.tool === 'line' && this.poly.length) {
+      const last = this.poly[this.poly.length - 1];
+      const len = dist(last, this.cursor);
+      const deg = (-Math.atan2(this.cursor.y - last.y, this.cursor.x - last.x) * 180) / Math.PI;
+      let total = len;
+      for (let i = 1; i < this.poly.length; i++) total += dist(this.poly[i - 1], this.poly[i]);
+      const mid = this.toScreen({ x: (last.x + this.cursor.x) / 2, y: (last.y + this.cursor.y) / 2 });
+      if (len * this.zoom > 40) this.dimLabel(f(len), mid.x, mid.y - 14, 'center');
+      tip(`L ${f(len)} mm  ${f(deg)}°` + (this.poly.length > 1 ? `  ·  ${t('전체')} ${f(total)} mm` : ''));
     }
   }
 
