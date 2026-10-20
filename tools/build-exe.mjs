@@ -14,7 +14,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const build = join(root, 'build');
-const release = join(root, 'release');
+// LASER_RELEASE_DIR 로 다른 폴더에 만들 수 있다 (기존 exe 가 실행 중이라 덮어쓸 수 없을 때)
+const release = process.env.LASER_RELEASE_DIR ? resolve(root, process.env.LASER_RELEASE_DIR) : join(root, 'release');
 const exe = join(release, 'LaserTool.exe');
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32', ...opts });
 const step = (s) => console.log(`\n▶ ${s}`);

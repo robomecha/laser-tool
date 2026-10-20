@@ -10,3 +10,4 @@ mcp-snapshot.png
 .env.*.local
 build/
 release/
+release-*/
