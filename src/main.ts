@@ -563,7 +563,18 @@ btnConnect.onclick = async () => {
       log(`연결됨 (${device.baudRate} baud)`);
     }
   } catch (e) {
-    status(`연결 실패: ${(e as Error).message}`);
+    const err = e as Error;
+    let hint = err.message;
+    if (err.name === 'NotFoundError') {
+      // 포트 선택 창을 제공하지 않는 내장 브라우저(Electron 등)에서는 선택 없이 바로 이 오류가 난다
+      hint = /Electron|Claude\//.test(navigator.userAgent)
+        ? '이 창(앱 내장 브라우저)은 USB 포트 선택을 지원하지 않습니다. Chrome 또는 Edge 에서 http://localhost:5173 을 여세요.'
+        : '포트를 선택하지 않았습니다. 목록에 없으면 USB 케이블·드라이버(CH340/FTDI)를 확인하세요.';
+    } else if (err.name === 'NetworkError' || err.name === 'InvalidStateError') {
+      hint = '포트를 열 수 없습니다. LightBurn·LaserGRBL 등 다른 프로그램이 포트를 쓰고 있지 않은지 확인하세요.';
+    }
+    status(`연결 실패: ${hint}`, true);
+    log(`[연결 실패] ${err.name}: ${err.message}`, 'err');
   }
   refreshLaserButtons();
 };
