@@ -58,3 +58,20 @@ describe('regular polygon', () => {
     close(Math.hypot(s.pts[1].x, s.pts[1].y), 5);
   });
 });
+
+describe('shape picking', () => {
+  it('picks the smaller inner shape when clicking inside a later, bigger shape', async () => {
+    const { rectPolyline } = await import('../src/core/geometry');
+    const { makeVector, pickShape } = await import('../src/core/shapes');
+    const inner = makeVector([rectPolyline(40, 40, 20, 20)], 0, 'inner');
+    const outer = makeVector([rectPolyline(0, 0, 100, 100)], 0, 'outer'); // 나중에 그린 큰 도형
+    const shapes = [inner, outer];
+    expect(pickShape(shapes, { x: 50, y: 50 }, 1)?.name).toBe('inner');
+    // 큰 도형 안쪽이지만 작은 도형 밖 → 큰 도형
+    expect(pickShape(shapes, { x: 10, y: 10 }, 1)?.name).toBe('outer');
+    // 큰 도형의 테두리 → 큰 도형
+    expect(pickShape(shapes, { x: 100, y: 50 }, 1)?.name).toBe('outer');
+    // 밖 → 없음
+    expect(pickShape(shapes, { x: 150, y: 50 }, 1)).toBeNull();
+  });
+});

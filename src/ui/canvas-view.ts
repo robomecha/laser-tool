@@ -19,7 +19,7 @@ import {
   Vec,
 } from '../core/geometry';
 import { layerColor } from '../core/layers';
-import { makeVector, shapeBBox, hitTest, Shape, worldPaths } from '../core/shapes';
+import { makeVector, pickShape, shapeBBox, Shape, worldPaths } from '../core/shapes';
 import { Job } from '../cam/job';
 import { cachedImageEl } from '../io/image-import';
 import { t } from './i18n';
@@ -233,13 +233,8 @@ export class CanvasView {
   }
 
   private shapeAt(w: Vec): Shape | null {
-    const tol = 4 / this.zoom;
-    for (let i = this.doc.shapes.length - 1; i >= 0; i--) {
-      const s = this.doc.shapes[i];
-      if (!this.doc.layer(s.layer).show) continue;
-      if (hitTest(s, w, tol)) return s;
-    }
-    return null;
+    const visible = this.doc.shapes.filter((s) => this.doc.layer(s.layer).show);
+    return pickShape(visible, w, 4 / this.zoom);
   }
 
   private onDown(e: PointerEvent): void {

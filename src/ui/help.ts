@@ -38,7 +38,7 @@ const SECTIONS: Section[] = [
     body: {
       ko: `<ul>
 <li><b>도구</b> (왼쪽): 선택 ${kbd('S')}, 선/폴리라인 ${kbd('L')} (더블클릭·Enter·우클릭으로 완료, 첫 점 클릭 시 닫힘), 사각형 ${kbd('R')}, 타원 ${kbd('E')}, 정다각형·별 ${kbd('N')} (중심에서 드래그, 위쪽 막대에서 변의 수·별 모양), 텍스트 ${kbd('T')}, 화면 이동 ${kbd('H')}. ${kbd('Shift')} 를 누르면 정사각형/원, 45° 각도.</li>
-<li><b>선택</b>: 클릭, ${kbd('Shift')}/${kbd('Ctrl')}+클릭으로 추가. 왼쪽→오른쪽 박스는 완전히 포함된 도형, 오른쪽→왼쪽 박스는 걸친 도형을 선택합니다.</li>
+<li><b>선택</b>: 클릭, ${kbd('Shift')}/${kbd('Ctrl')}+클릭으로 추가. 왼쪽→오른쪽 박스는 완전히 포함된 도형, 오른쪽→왼쪽 박스는 걸친 도형을 선택합니다. 도형이 겹쳐 있으면 선을 클릭한 도형, 안쪽을 클릭하면 그 자리를 감싸는 가장 작은 도형이 선택됩니다 (큰 바깥 도형은 테두리를 클릭).</li>
 <li><b>변형</b>: 모서리 핸들(비율 유지, ${kbd('Shift')} 자유), 가장자리 핸들, 위쪽 초록 핸들로 회전(${kbd('Shift')} 15° 단위). 상단 X·Y·W·H·회전 칸에 숫자로도 입력합니다. 화살표 키로 1mm(${kbd('Shift')} 10mm) 이동.</li>
 <li><b>편집</b>: 잘라내기·복사·붙여넣기·복제·삭제, 정렬, 반전, 90° 회전, 작업대 중앙.</li>
 <li><b>배열</b>: ▦ 격자 배열(행·열, 간격 또는 중심 거리), ◌ 원형 배열(개수, 각도, 회전 중심, 복사본 회전).</li>
@@ -48,7 +48,7 @@ const SECTIONS: Section[] = [
 </ul>`,
       en: `<ul>
 <li><b>Tools</b> (left): Select ${kbd('S')}, Line/polyline ${kbd('L')} (finish with double-click, Enter or right-click; click the first point to close), Rectangle ${kbd('R')}, Ellipse ${kbd('E')}, Polygon/star ${kbd('N')} (drag from the center; set sides and star in the bar above), Text ${kbd('T')}, Pan ${kbd('H')}. Hold ${kbd('Shift')} for squares/circles and 45° angles.</li>
-<li><b>Selecting</b>: click, ${kbd('Shift')}/${kbd('Ctrl')}+click to add. A left-to-right box selects shapes fully inside it; a right-to-left box selects anything it touches.</li>
+<li><b>Selecting</b>: click, ${kbd('Shift')}/${kbd('Ctrl')}+click to add. A left-to-right box selects shapes fully inside it; a right-to-left box selects anything it touches. With overlapping shapes, clicking a line picks that shape and clicking inside picks the smallest shape around that point (click the edge to pick a big outer shape).</li>
 <li><b>Transform</b>: corner handles keep proportions (${kbd('Shift')} for free), edge handles stretch, the green handle rotates (${kbd('Shift')} snaps to 15°). You can also type X, Y, W, H and rotation in the top bar. Arrow keys nudge 1mm (${kbd('Shift')} 10mm).</li>
 <li><b>Edit</b>: cut, copy, paste, duplicate, delete, align, mirror, rotate 90°, center on bed.</li>
 <li><b>Arrays</b>: ▦ grid array (rows and columns, gap or center pitch), ◌ circular array (count, angle, center, rotate copies).</li>

@@ -112,6 +112,39 @@ export function hitTest(s: Shape, p: Vec, tol: number): boolean {
   return inside;
 }
 
+/** 클릭 위치가 도형의 선(테두리) 위인지, 닫힌 영역 안인지 */
+export function hitKind(s: Shape, p: Vec, tol: number): 'edge' | 'inside' | null {
+  const paths = worldPaths(s);
+  for (const l of paths) if (distPointPolyline(p, l) <= tol) return 'edge';
+  if (s.type === 'image') return pointInPolygon(p, paths[0].pts) ? 'inside' : null;
+  let inside = false;
+  for (const l of paths) if (l.closed && l.pts.length > 2 && pointInPolygon(p, l.pts)) inside = !inside;
+  return inside ? 'inside' : null;
+}
+
+/**
+ * 클릭으로 고를 도형. 선 위를 클릭했으면 가장 위의 도형, 안쪽을 클릭했으면 그 점을 감싸는 도형 중 가장 작은 것.
+ * (큰 도형을 나중에 그려도 그 안의 작은 도형을 고를 수 있고, 큰 도형은 테두리를 눌러 고른다)
+ */
+export function pickShape(shapes: Shape[], p: Vec, tol: number): Shape | null {
+  let best: Shape | null = null;
+  let bestArea = Infinity;
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    const k = hitKind(s, p, tol);
+    if (k === 'edge') return s;
+    if (k === 'inside') {
+      const b = shapeBBox(s);
+      const area = (b.maxX - b.minX) * (b.maxY - b.minY);
+      if (area < bestArea) {
+        bestArea = area;
+        best = s;
+      }
+    }
+  }
+  return best;
+}
+
 export function shapeCenter(s: Shape): Vec {
   const b = shapeBBox(s);
   return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
