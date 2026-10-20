@@ -1,5 +1,5 @@
 // 앱 진입점: 문서·화면·패널·장비 연결을 묶는다.
-import { DeviceSettings, fromMachine, loadDevice, saveDevice, toMachine } from './core/device';
+import { defaultDevice, DeviceSettings, fromMachine, loadDevice, saveDevice, toMachine } from './core/device';
 import { LaserDocument } from './core/document';
 import { about, isEmptyBBox, Mat, rotate, scale, translate } from './core/geometry';
 import { layerColor, PALETTE } from './core/layers';
@@ -537,12 +537,16 @@ window.addEventListener('keydown', (e) => {
 function openDeviceDialog(): void {
   const dlg = $<HTMLDialogElement>('device-dialog');
   const form = dlg.querySelector('form')!;
-  for (const [k, v] of Object.entries(device)) {
-    const input = form.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
-    if (!input) continue;
-    if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = Boolean(v);
-    else input.value = String(v);
-  }
+  const fill = (d: DeviceSettings) => {
+    for (const [k, v] of Object.entries(d)) {
+      const input = form.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
+      if (!input) continue;
+      if (input instanceof HTMLInputElement && input.type === 'checkbox') input.checked = Boolean(v);
+      else input.value = String(v);
+    }
+  };
+  fill(device);
+  $<HTMLButtonElement>('device-reset').onclick = () => fill(defaultDevice());
   dlg.onclose = () => {
     if (dlg.returnValue !== 'ok') return;
     const next = { ...device } as Record<string, unknown>;

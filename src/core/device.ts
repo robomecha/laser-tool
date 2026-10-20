@@ -29,10 +29,11 @@ export interface DeviceSettings {
 export function defaultDevice(): DeviceSettings {
   return {
     name: 'My Laser',
-    controller: 'grbl',
-    bedWidth: 400,
-    bedHeight: 300,
-    origin: 'bottom-left',
+    controller: 'ruida',
+    bedWidth: 600,
+    bedHeight: 500,
+    // Ruida 장비는 보통 오른쪽 위가 기계 원점
+    origin: 'top-right',
     sMax: 1000,
     travelSpeed: 100,
     dynamicPower: true,
