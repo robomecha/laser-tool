@@ -27,7 +27,7 @@ type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rot';
 
 type Drag =
   | { kind: 'pan'; sx: number; sy: number; px: number; py: number }
-  | { kind: 'move'; start: Vec; orig: Map<string, Mat>; moved: boolean }
+  | { kind: 'move'; start: Vec; orig: Map<string, Mat>; moved: boolean; box: BBox }
   | { kind: 'scale'; handle: Handle; box: BBox; orig: Map<string, Mat> }
   | { kind: 'rotate'; center: Vec; a0: number; orig: Map<string, Mat> }
   | { kind: 'band'; start: Vec; cur: Vec; additive: boolean }
@@ -57,6 +57,16 @@ export class CanvasView {
   textPreview: { anchor: Vec; paths: Polyline[] } | null = null;
   /** 매 렌더링 후 (화면 위 HTML 오버레이 위치 갱신용) */
   onRendered: () => void = () => {};
+
+  /** 눈금(그리드) 간격 mm */
+  gridStep = 10;
+  /** 그리드 스냅 */
+  snapOn = true;
+  snapStep = 1;
+  /** 도형 꼭짓점·중심 스냅 */
+  snapPoints = true;
+  /** 마지막으로 점 스냅에 걸린 점 (화면 표시용) */
+  private snapHit: Vec | null = null;
 
   private ctx: CanvasRenderingContext2D;
   private drag: Drag | null = null;
@@ -241,7 +251,7 @@ export class CanvasView {
           if (e.shiftKey || e.ctrlKey) this.doc.toggleSelect(hit.id);
           else if (!this.doc.selection.has(hit.id)) this.doc.select([hit.id]);
           if (this.doc.selection.has(hit.id)) {
-            this.drag = { kind: 'move', start: w, orig: this.selectionOrig(), moved: false };
+            this.drag = { kind: 'move', start: w, orig: this.selectionOrig(), moved: false, box: this.doc.selectionBBox() };
           }
         } else {
           this.drag = { kind: 'band', start: w, cur: w, additive: e.shiftKey || e.ctrlKey };
@@ -250,21 +260,65 @@ export class CanvasView {
       }
       case 'rect':
       case 'ellipse':
-        this.drag = { kind: 'shape', tool: this.tool, start: w, cur: w };
+        {
+          const p = this.snapPoint(w);
+          this.drag = { kind: 'shape', tool: this.tool, start: p, cur: p };
+        }
         return;
       case 'text':
-        this.onTextClick(w);
+        this.onTextClick(this.snapPoint(w));
         return;
       case 'line': {
         if (this.poly.length > 2 && dist(this.toScreen(this.poly[0]), s) < 8) {
           this.finishPoly(true);
           return;
         }
-        this.poly.push(this.snap(w, e.shiftKey));
+        this.poly.push(this.snap(this.snapPoint(w), e.shiftKey));
         this.requestRender();
         return;
       }
     }
+  }
+
+  /** 그리드 스냅만 */
+  private snapGrid(w: Vec): Vec {
+    if (!this.snapOn || this.snapStep <= 0) return w;
+    const k = this.snapStep;
+    return { x: Math.round(w.x / k) * k, y: Math.round(w.y / k) * k };
+  }
+
+  /** 점 스냅(꼭짓점·도형 중심, 화면 8px 이내) → 없으면 그리드 스냅 */
+  snapPoint(w: Vec, exclude?: Set<string>): Vec {
+    this.snapHit = null;
+    if (this.snapPoints) {
+      const tol = 8 / this.zoom;
+      let best: Vec | null = null;
+      let bd = tol;
+      const consider = (p: Vec) => {
+        const d = Math.abs(p.x - w.x) + Math.abs(p.y - w.y);
+        if (d < bd) {
+          bd = d;
+          best = p;
+        }
+      };
+      for (const sh of this.doc.shapes) {
+        if (exclude?.has(sh.id) || !this.doc.layer(sh.layer).show) continue;
+        const b = shapeBBox(sh);
+        if (b.maxX < w.x - tol || b.minX > w.x + tol || b.maxY < w.y - tol || b.minY > w.y + tol) {
+          // 범위 밖이어도 중심은 확인 (작은 도형 안쪽 클릭)
+          consider({ x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 });
+          continue;
+        }
+        consider({ x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 });
+        for (const l of worldPaths(sh)) for (const p of l.pts) consider(p);
+      }
+      for (const p of this.poly) consider(p);
+      if (best) {
+        this.snapHit = best;
+        return { ...(best as Vec) };
+      }
+    }
+    return this.snapGrid(w);
   }
 
   /** Shift: 직전 점 기준 45° 단위 스냅 */
@@ -285,7 +339,8 @@ export class CanvasView {
   }
 
   private onMove(e: PointerEvent): void {
-    const { s, w } = this.eventPos(e);
+    const { s } = this.eventPos(e);
+    let { w } = this.eventPos(e);
     this.cursor = w;
     this.onCursor(w);
     const d = this.drag;
@@ -298,7 +353,10 @@ export class CanvasView {
         };
         this.canvas.style.cursor = h ? cursors[h] : this.shapeAt(w) ? 'move' : 'default';
       }
-      if (this.tool === 'line' && this.poly.length) this.requestRender();
+      if (this.tool === 'line' || this.tool === 'rect' || this.tool === 'ellipse' || this.tool === 'text') {
+        this.cursor = this.snapPoint(w);
+        this.requestRender();
+      }
       return;
     }
     switch (d.kind) {
@@ -315,6 +373,11 @@ export class CanvasView {
           else dx = 0;
         }
         if (!d.moved && Math.hypot(dx, dy) * this.zoom < 3) return;
+        if (this.snapOn && this.snapStep > 0) {
+          const k = this.snapStep;
+          if (dx) dx = Math.round((d.box.minX + dx) / k) * k - d.box.minX;
+          if (dy) dy = Math.round((d.box.minY + dy) / k) * k - d.box.minY;
+        }
         if (!d.moved) {
           this.doc.checkpoint();
           d.moved = true;
@@ -323,6 +386,7 @@ export class CanvasView {
         break;
       }
       case 'scale': {
+        w = this.snapGrid(w);
         const b = d.box;
         const h = d.handle;
         // 고정점 = 반대편 핸들
@@ -351,7 +415,7 @@ export class CanvasView {
       }
       case 'band':
       case 'shape':
-        d.cur = w;
+        d.cur = d.kind === 'shape' ? this.snapPoint(w) : w;
         if (d.kind === 'shape' && e.shiftKey) {
           const side = Math.max(Math.abs(w.x - d.start.x), Math.abs(w.y - d.start.y));
           d.cur = { x: d.start.x + Math.sign(w.x - d.start.x || 1) * side, y: d.start.y + Math.sign(w.y - d.start.y || 1) * side };
@@ -438,10 +502,15 @@ export class CanvasView {
     const d = this.device();
     ctx.fillStyle = '#f4f4f2';
     ctx.fillRect(0, 0, d.bedWidth, d.bedHeight);
-    // 그리드: 줌에 따라 간격 조정
-    const minor = this.zoom > 4 ? 5 : 10;
+    // 그리드: 사용자 눈금 간격(1mm 단위) + 굵은 선(10칸마다, 10mm 이상이면 50mm)
+    const minor = Math.max(1, Math.round(this.gridStep));
+    const major = minor >= 10 ? Math.max(50, minor * 5) : minor * 10;
     ctx.lineWidth = px;
-    for (const [step, color] of [[minor, '#e2e2de'], [50, '#c8c8c2']] as const) {
+    const steps: [number, string][] = [];
+    // 화면에서 4px 보다 촘촘하면 그리지 않는다
+    if (minor * this.zoom >= 4) steps.push([minor, '#e2e2de']);
+    if (major * this.zoom >= 4) steps.push([major, '#c8c8c2']);
+    for (const [step, color] of steps) {
       ctx.strokeStyle = color;
       ctx.beginPath();
       for (let x = 0; x <= d.bedWidth; x += step) {
@@ -626,6 +695,23 @@ export class CanvasView {
       ctx.stroke();
       ctx.fillStyle = '#3d8bfd';
       for (const p of this.poly) ctx.fillRect(p.x - 2 * px, p.y - 2 * px, 4 * px, 4 * px);
+    }
+    // 스냅 표시: 점 스냅은 자홍색 사각형, 그리드 스냅은 작은 십자
+    if (['line', 'rect', 'ellipse', 'text'].includes(this.tool)) {
+      const c = this.cursor;
+      ctx.lineWidth = 1.5 * px;
+      if (this.snapHit) {
+        ctx.strokeStyle = '#d6409f';
+        ctx.strokeRect(c.x - 5 * px, c.y - 5 * px, 10 * px, 10 * px);
+      } else if (this.snapOn) {
+        ctx.strokeStyle = '#3d8bfd';
+        ctx.beginPath();
+        ctx.moveTo(c.x - 5 * px, c.y);
+        ctx.lineTo(c.x + 5 * px, c.y);
+        ctx.moveTo(c.x, c.y - 5 * px);
+        ctx.lineTo(c.x, c.y + 5 * px);
+        ctx.stroke();
+      }
     }
   }
 

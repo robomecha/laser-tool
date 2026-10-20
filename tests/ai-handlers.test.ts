@@ -64,3 +64,16 @@ describe('AI handlers', () => {
     expect(ctx.doc.shapes).toHaveLength(1);
   });
 });
+
+describe('AI array tool', () => {
+  it('grid and circular arrays add copies', async () => {
+    const ctx = makeCtx();
+    const r = (await handlers.draw_shapes(ctx, { shapes: [{ type: 'rect', x: 0, y: 0, width: 10, height: 10 }] })) as Created;
+    const g = (await handlers.array_shapes(ctx, { ids: [r.created[0].id], kind: 'grid', columns: 3, rows: 2, spacingX: 2, spacingY: 2 })) as { created: string[] };
+    expect(g.created).toHaveLength(5);
+    const c = (await handlers.array_shapes(ctx, { ids: [r.created[0].id], kind: 'circular', count: 4, centerX: 5, centerY: 40 })) as { created: string[] };
+    expect(c.created).toHaveLength(3);
+    expect(ctx.doc.shapes).toHaveLength(9);
+    expect(() => handlers.array_shapes(ctx, { ids: [r.created[0].id], kind: 'circular', count: 3 })).toThrow(/center/);
+  });
+});

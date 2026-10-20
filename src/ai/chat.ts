@@ -19,6 +19,7 @@ const TOOL_LABEL: Record<string, string> = {
   set_layer: '레이어 설정',
   offset_shapes: '오프셋',
   boolean_shapes: '불리언',
+  array_shapes: '배열 복사',
   preview_job: '가공 미리 계산',
   undo: '실행 취소',
   snapshot: '결과 확인',

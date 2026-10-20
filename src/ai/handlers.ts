@@ -2,6 +2,7 @@
 import { DeviceSettings, fromMachine } from '../core/device';
 import { LaserDocument } from '../core/document';
 import { about, arcPoints, BBox, ellipsePolyline, isEmptyBBox, Mat, mul, Polyline, rectPolyline, rotate, scale, translate, Vec } from '../core/geometry';
+import { circularArray, gridArray } from '../core/array';
 import { BoolOp, booleanOp, OffsetJoin, offsetPolylines } from '../core/clip';
 import { DitherMode, LayerMode, LayerSettings, PALETTE } from '../core/layers';
 import { applyToShape, ImageShape, makeVector, Shape, shapeBBox, VectorShape, worldPaths } from '../core/shapes';
@@ -263,6 +264,31 @@ export const handlers: Record<string, Handler> = {
     const result = makeVector(paths, shapes[0].layer, String(p.op));
     ctx.doc.replace(shapes.map((s) => s.id), [result]);
     return { id: result.id, paths: paths.length, bbox: box(shapeBBox(result)) };
+  },
+
+  array_shapes(ctx, p) {
+    const shapes = shapesById(ctx, p.ids as string[]);
+    let copies: Shape[];
+    if (p.kind === 'grid') {
+      copies = gridArray(shapes, {
+        columns: Number(p.columns ?? 1),
+        rows: Number(p.rows ?? 1),
+        spacingX: Number(p.spacingX ?? 5),
+        spacingY: Number(p.spacingY ?? 5),
+        spacing: (p.spacing as 'gap' | 'pitch') ?? 'gap',
+      });
+    } else {
+      if (p.centerX === undefined || p.centerY === undefined) throw new Error('circular 배열에는 centerX, centerY 가 필요합니다');
+      copies = circularArray(shapes, {
+        count: Number(p.count ?? 2),
+        center: { x: Number(p.centerX), y: Number(p.centerY) },
+        totalAngle: Number(p.totalAngle ?? 360),
+        rotateCopies: p.rotateCopies !== false,
+      });
+    }
+    if (!copies.length) throw new Error('만들 복사본이 없습니다 (개수를 2 이상으로)');
+    ctx.doc.add(copies);
+    return { created: copies.map((s) => s.id), bbox: box(groupBBox([...shapes, ...copies])) };
   },
 
   async preview_job(ctx) {

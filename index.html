@@ -22,8 +22,17 @@
       <div class="group">
         <button data-cmd="undo" title="실행 취소 (Ctrl+Z)">↶</button>
         <button data-cmd="redo" title="다시 실행 (Ctrl+Y)">↷</button>
+      </div>
+      <div class="group">
+        <button data-cmd="cut" title="잘라내기 (Ctrl+X)">✂ 잘라내기</button>
+        <button data-cmd="copy" title="복사 (Ctrl+C)">⎘ 복사</button>
+        <button data-cmd="paste" title="붙여넣기 (Ctrl+V) – 10mm 옆에">📋 붙여넣기</button>
+        <button data-cmd="duplicate" title="복제 (Ctrl+D) – 복사 후 바로 붙여넣기">⧉ 복제</button>
         <button data-cmd="delete" title="삭제 (Del)">🗑</button>
-        <button data-cmd="duplicate" title="복제 (Ctrl+D)">⧉</button>
+      </div>
+      <div class="group">
+        <button data-cmd="grid-array" title="선택 도형을 행·열로 배열 복사 (Ctrl+Shift+A)">▦ 배열</button>
+        <button data-cmd="circular-array" title="선택 도형을 원 둘레로 배열 복사">◌ 원형 배열</button>
       </div>
       <div class="group">
         <button data-cmd="align-left" title="왼쪽 정렬">⇤</button>
@@ -71,6 +80,12 @@
       <label title="비율 고정"><input id="num-lock" type="checkbox" checked /> 🔒</label>
       <label>회전 <input id="num-rot" type="number" step="1" value="0" /> °</label>
       <span class="hint">mm · 선택 영역 왼쪽 위 기준</span>
+      <span class="snap-controls">
+        <label title="작업대 눈금 간격 (1mm 단위)">눈금 <input id="grid-step" type="number" min="1" max="100" step="1" value="10" /> mm</label>
+        <label title="그리기·이동·크기 조절을 간격에 맞춤 (G)"><input id="snap-on" type="checkbox" checked /> 스냅</label>
+        <label title="스냅 간격"><input id="snap-step" type="number" min="0.1" max="100" step="0.5" value="1" /> mm</label>
+        <label title="도형 꼭짓점·중심에 붙기"><input id="snap-points" type="checkbox" checked /> 점 스냅</label>
+      </span>
     </div>
 
     <div id="text-options" hidden>
@@ -215,6 +230,54 @@
         <span id="status-zoom"></span>
       </div>
     </footer>
+
+    <dialog id="grid-array-dialog">
+      <form method="dialog">
+        <h3>▦ 격자 배열</h3>
+        <div class="grid">
+          <label>열 (가로 개수) <input name="columns" type="number" min="1" max="100" value="3" /></label>
+          <label>행 (세로 개수) <input name="rows" type="number" min="1" max="100" value="2" /></label>
+          <label>간격 방식
+            <select name="spacing">
+              <option value="gap">도형 사이 간격</option>
+              <option value="pitch">중심 사이 거리</option>
+            </select>
+          </label>
+          <span class="hint" data-role="size"></span>
+          <label>가로 간격 (mm) <input name="spacingX" type="number" step="0.1" value="5" /></label>
+          <label>세로 간격 (mm) <input name="spacingY" type="number" step="0.1" value="5" /></label>
+        </div>
+        <p class="hint" data-role="summary"></p>
+        <menu>
+          <button value="cancel">취소</button>
+          <button value="ok" class="primary">배열 만들기</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="circular-array-dialog">
+      <form method="dialog">
+        <h3>◌ 원형 배열</h3>
+        <div class="grid">
+          <label>개수 (원본 포함) <input name="count" type="number" min="2" max="360" value="6" /></label>
+          <label>펼칠 각도 (°) <input name="totalAngle" type="number" min="-360" max="360" value="360" /></label>
+          <label>회전 중심 X (mm) <input name="cx" type="number" step="0.1" /></label>
+          <label>회전 중심 Y (mm) <input name="cy" type="number" step="0.1" /></label>
+          <label class="check"><input name="rotateCopies" type="checkbox" checked /> 복사본도 함께 회전 (방사형)</label>
+          <span class="center-buttons">
+            중심:
+            <button type="button" data-center="below">선택 아래쪽</button>
+            <button type="button" data-center="selection">선택 중심</button>
+            <button type="button" data-center="bed">작업대 중앙</button>
+          </span>
+        </div>
+        <p class="hint">360° 는 한 바퀴를 개수만큼 나누고, 그보다 작으면 처음과 끝을 포함해 나눕니다.</p>
+        <menu>
+          <button value="cancel">취소</button>
+          <button value="ok" class="primary">배열 만들기</button>
+        </menu>
+      </form>
+    </dialog>
 
     <dialog id="device-dialog">
       <form method="dialog">

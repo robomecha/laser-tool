@@ -597,3 +597,28 @@ dialog menu {
   padding: 6px;
   font: inherit;
 }
+
+dialog .hint {
+  color: var(--muted);
+  font-size: 12px;
+  align-self: end;
+}
+dialog .center-buttons {
+  grid-column: span 2;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+}
+
+#numeric .snap-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+#numeric .snap-controls input[type='number'] {
+  width: 56px;
+}

@@ -17,6 +17,7 @@ import { jobToGcode } from './output/gcode';
 import { jobToRuidaFile, jobToRuidaPlain } from './output/ruida';
 import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
+import { ArrayDialogs } from './ui/array-dialogs';
 import { AiBridge } from './ai/bridge';
 import { ChatPanel } from './ai/chat';
 import { TextTool } from './ui/text-tool';
@@ -29,6 +30,7 @@ const view = new CanvasView($<HTMLCanvasElement>('view'), doc, () => device);
 new LayerPanel(doc, document.querySelector('#layer-table tbody')!, $('layer-editor'));
 const textTool = new TextTool(doc, view);
 const ai = new AiBridge({ doc, device: () => device, textTool });
+const arrays = new ArrayDialogs(doc, () => device, (m) => status(m));
 const chat = new ChatPanel({ doc, device: () => device, textTool }, $('chat-panel'));
 const grbl = new GrblConnection();
 const ruida = new RuidaUsbConnection();
@@ -392,10 +394,20 @@ const commands: Record<string, () => void | Promise<void>> = {
   device: () => openDeviceDialog(),
   'zoom-fit': () => view.zoomToFit(),
   copy: () => {
+    if (!doc.selection.size) return status('복사할 도형을 선택하세요');
     clipboard = doc.selected().map((s) => cloneShape(s));
+    status(`도형 ${clipboard.length}개를 복사했습니다 (Ctrl+V 로 붙여넣기)`);
   },
+  cut: () => {
+    if (!doc.selection.size) return status('잘라낼 도형을 선택하세요');
+    clipboard = doc.selected().map((s) => cloneShape(s));
+    doc.deleteSelected();
+    status(`도형 ${clipboard.length}개를 잘라냈습니다 (Ctrl+V 로 붙여넣기)`);
+  },
+  'grid-array': () => arrays.openGrid(),
+  'circular-array': () => arrays.openCircular(),
   paste: () => {
-    if (!clipboard.length) return;
+    if (!clipboard.length) return status('붙여넣을 도형이 없습니다 (먼저 복사하세요)');
     const copies = clipboard.map((s) => {
       const c = cloneShape(s, false);
       c.transform[4] += 10;
@@ -457,6 +469,7 @@ window.addEventListener('keydown', (e) => {
   };
   if (ctrl && k === 'z' && !e.shiftKey) return run('undo');
   if (ctrl && (k === 'y' || (k === 'z' && e.shiftKey))) return run('redo');
+  if (ctrl && e.shiftKey && k === 'a') return run('grid-array');
   if (ctrl && k === 'a') {
     e.preventDefault();
     return doc.selectAll();
@@ -464,10 +477,7 @@ window.addEventListener('keydown', (e) => {
   if (ctrl && k === 'd') return run('duplicate');
   if (ctrl && k === 'c') return run('copy');
   if (ctrl && k === 'v') return run('paste');
-  if (ctrl && k === 'x') {
-    commands.copy();
-    return run('delete');
-  }
+  if (ctrl && k === 'x') return run('cut');
   if (ctrl && k === 's') return run('save');
   if (ctrl && k === 'o') return run('open');
   if (ctrl && k === 'i') return run('import');
@@ -493,6 +503,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'o') return run('offset');
   if (k === 'f') return run('zoom-fit');
   if (k === 'c') return run('chat');
+  if (k === 'g') return run('toggle-snap');
 });
 
 // ---------------- 장비 설정 ----------------
@@ -703,6 +714,48 @@ consoleInput.onkeydown = (e) => {
     return;
   }
   guard(() => grbl.send(cmd))();
+};
+
+// ---------------- 눈금 / 스냅 ----------------
+
+const SNAP_KEY = 'laser-tool.snap';
+const gridStepIn = $<HTMLInputElement>('grid-step');
+const snapOnIn = $<HTMLInputElement>('snap-on');
+const snapStepIn = $<HTMLInputElement>('snap-step');
+const snapPointsIn = $<HTMLInputElement>('snap-points');
+
+function applySnapSettings(save = true): void {
+  view.gridStep = Math.max(1, Math.round(Number(gridStepIn.value) || 10));
+  gridStepIn.value = String(view.gridStep);
+  view.snapOn = snapOnIn.checked;
+  view.snapStep = Math.max(0.1, Number(snapStepIn.value) || 1);
+  view.snapPoints = snapPointsIn.checked;
+  snapStepIn.disabled = !view.snapOn;
+  view.requestRender();
+  if (!save) return;
+  try {
+    localStorage.setItem(SNAP_KEY, JSON.stringify({ grid: view.gridStep, on: view.snapOn, step: view.snapStep, points: view.snapPoints }));
+  } catch {
+    /* 무시 */
+  }
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+  if (saved) {
+    gridStepIn.value = String(saved.grid ?? 10);
+    snapOnIn.checked = saved.on ?? true;
+    snapStepIn.value = String(saved.step ?? 1);
+    snapPointsIn.checked = saved.points ?? true;
+  }
+} catch {
+  /* 무시 */
+}
+applySnapSettings(false);
+for (const el of [gridStepIn, snapOnIn, snapStepIn, snapPointsIn]) el.onchange = () => applySnapSettings();
+commands['toggle-snap'] = () => {
+  snapOnIn.checked = !snapOnIn.checked;
+  applySnapSettings();
+  status(`스냅 ${snapOnIn.checked ? '켜짐' : '꺼짐'} (${view.snapStep} mm)`);
 };
 
 // ---------------- AI (MCP) 연결 ----------------

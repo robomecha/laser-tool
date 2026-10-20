@@ -112,6 +112,25 @@ export const TOOL_DEFS: ToolDef[] = [
     description: '닫힌 도형들을 합치기/빼기/교집합/배타적합 하여 하나로 바꾼다. difference 는 ids[0] 에서 나머지를 뺀다.',
     shape: { ids: z.array(z.string()).min(2), op: z.enum(['union', 'difference', 'intersection', 'xor']) },
   },
+  {
+    name: 'array_shapes',
+    description:
+      '도형을 배열 복사한다. grid: 행·열로 (spacing=gap 이면 도형 사이 간격, pitch 면 중심 거리). circular: 중심점 둘레로 count 개(원본 포함), totalAngle 360 이면 한 바퀴 등분. 만든 복사본 id 를 돌려준다.',
+    shape: {
+      ids,
+      kind: z.enum(['grid', 'circular']),
+      columns: z.number().int().min(1).max(100).optional().describe('grid: 열 개수'),
+      rows: z.number().int().min(1).max(100).optional().describe('grid: 행 개수'),
+      spacingX: z.number().optional().describe('grid: 가로 간격 mm'),
+      spacingY: z.number().optional().describe('grid: 세로 간격 mm'),
+      spacing: z.enum(['gap', 'pitch']).optional().describe('grid: 간격 방식 (기본 gap)'),
+      count: z.number().int().min(2).max(360).optional().describe('circular: 원본 포함 개수'),
+      centerX: z.number().optional().describe('circular: 회전 중심 X mm'),
+      centerY: z.number().optional().describe('circular: 회전 중심 Y mm'),
+      totalAngle: z.number().min(-360).max(360).optional().describe('circular: 펼칠 각도 deg (기본 360)'),
+      rotateCopies: z.boolean().optional().describe('circular: 복사본도 회전 (기본 true)'),
+    },
+  },
   { name: 'preview_job', description: '가공 경로를 계산해 예상 시간, 가공/공이동 거리, 경고를 돌려준다 (레이저는 움직이지 않음).', shape: {} },
   { name: 'undo', description: '마지막 편집을 실행 취소한다.', shape: {} },
   {
