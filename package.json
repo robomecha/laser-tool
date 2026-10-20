@@ -12,7 +12,8 @@
     "test": "vitest run",
     "ruida:send": "node tools/ruida-send.mjs",
     "mcp": "node tools/mcp-server.mjs",
-    "mcp:test": "node tools/mcp-smoke-test.mjs"
+    "mcp:test": "node tools/mcp-smoke-test.mjs",
+    "mcp:register": "node tools/register-claude-desktop.mjs"
   },
   "license": "MIT",
   "devDependencies": {

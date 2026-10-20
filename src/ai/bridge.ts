@@ -15,7 +15,7 @@ export class AiBridge {
 
   constructor(
     private ctx: AiContext,
-    private url = 'ws://127.0.0.1:5174',
+    private url = 'ws://127.0.0.1:47801',
   ) {}
 
   start(): void {
@@ -42,7 +42,7 @@ export class AiBridge {
     this.set('connecting');
     const ws = new WebSocket(this.url);
     this.ws = ws;
-    ws.onopen = () => this.set('connected');
+    // 연결 자체가 아니라 서버의 인사 메시지를 받아야 연결된 것으로 본다 (같은 포트의 다른 서비스와 구분)
     ws.onclose = () => {
       if (this.ws !== ws) return;
       this.ws = null;
@@ -55,10 +55,14 @@ export class AiBridge {
   }
 
   private async handle(ws: WebSocket, raw: string): Promise<void> {
-    let msg: { id: number; method: string; params?: Record<string, unknown> };
+    let msg: { id: number; method: string; params?: Record<string, unknown>; hello?: string };
     try {
       msg = JSON.parse(raw);
     } catch {
+      return;
+    }
+    if (msg.hello === 'laser-tool-mcp') {
+      this.set('connected');
       return;
     }
     const fn = handlers[msg.method];

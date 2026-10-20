@@ -66,13 +66,14 @@ npm run ruida:send -- project.rd 192.168.1.100
 Claude 같은 AI 가 MCP 도구로 작업대에 직접 도형·텍스트·SVG 를 그리고 레이어를 설정할 수 있습니다.
 
 ```
-Claude ──MCP(stdio)──▶ tools/mcp-server.mjs ──WebSocket(127.0.0.1:5174)──▶ 브라우저 Laser Tool
+Claude ──MCP(stdio)──▶ tools/mcp-server.mjs ──WebSocket(127.0.0.1:47801)──▶ 브라우저 Laser Tool
 ```
 
 1. `npm run dev` 로 앱을 열고 상단 **[🤖 AI 연결]** 을 누릅니다 (MCP 서버가 뜰 때까지 "대기 중"으로 자동 재시도).
 2. MCP 클라이언트에 서버를 등록합니다.
    * **Claude Code**: 이 폴더에서 실행하면 `.mcp.json` 의 `laser-tool` 서버를 자동으로 제안합니다 (처음 한 번 승인).
-   * **Claude Desktop**: `claude_desktop_config.json` 에 추가 (경로는 실제 위치로):
+   * **Claude Desktop**: Claude Desktop 을 **완전히 종료**(트레이 → Quit)한 뒤 `npm run mcp:register` 실행 → Claude 다시 시작.
+     (실행 중에 설정 파일을 고치면 Claude 가 다시 저장하면서 지워질 수 있습니다.) 직접 넣으려면 `claude_desktop_config.json` 에:
      ```json
      { "mcpServers": { "laser-tool": { "command": "node", "args": ["C:/.../laser_tool/tools/mcp-server.mjs"] } } }
      ```

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Laser Tool MCP 서버: Claude 등 MCP 클라이언트가 브라우저에서 실행 중인 Laser Tool 에 그림을 그리게 한다.
 //
-//   Claude ──MCP(stdio)──▶ 이 서버 ──WebSocket(127.0.0.1:5174)──▶ 브라우저 Laser Tool ([AI 연결] 버튼)
+//   Claude ──MCP(stdio)──▶ 이 서버 ──WebSocket(127.0.0.1:47801)──▶ 브라우저 Laser Tool ([AI 연결] 버튼)
 //
 // 안전: 레이저 실행(시작/프레임/조그)은 MCP 로 제공하지 않는다. 가공은 사람이 앱에서 직접 시작한다.
 // stdout 은 MCP 통신 전용이므로 로그는 stderr 로만 쓴다.
@@ -10,7 +10,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 
-const PORT = Number(process.env.LASER_MCP_PORT || 5174);
+const PORT = Number(process.env.LASER_MCP_PORT || 47801);
 const ALLOWED_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 const TIMEOUT_MS = 30000;
 const log = (...a) => console.error('[laser-mcp]', ...a);
@@ -37,6 +37,8 @@ wss.on('connection', (ws, req) => {
   }
   if (client) client.close(1000, 'replaced');
   client = ws;
+  // 브라우저가 다른 서비스가 아닌 이 서버에 붙었음을 확인할 수 있도록 인사 메시지를 먼저 보낸다
+  ws.send(JSON.stringify({ hello: 'laser-tool-mcp', version: 1 }));
   log(`브라우저 연결됨 (${origin})`);
   ws.on('message', (raw) => {
     let msg;
