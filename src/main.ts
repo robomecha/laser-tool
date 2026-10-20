@@ -653,7 +653,7 @@ $('btn-frame').onclick = guard(async () => {
     toMachine(device, b.minX, b.maxY),
   ];
   if (active() === 'ruida') {
-    await ruida.frame(corners);
+    await ruida.frame(corners, device.travelSpeed);
     return;
   }
   const F = Math.round(device.travelSpeed * 60);
@@ -674,16 +674,17 @@ document.querySelectorAll<HTMLButtonElement>('[data-jog]').forEach((b) => {
     const c = active();
     if (!c) return;
     const step = Number($<HTMLInputElement>('jog-step').value) || 1;
-    const feed = (Number($<HTMLInputElement>('jog-speed').value) || 50) * 60;
+    const speed = Number($<HTMLInputElement>('jog-speed').value) || 50; // mm/s
+    const feed = speed * 60;
     if (b.dataset.jog === 'home') {
-      await (c === 'ruida' ? ruida.moveTo(0, 0) : grbl.send(`$J=G90 G21 X0 Y0 F${feed}`));
+      await (c === 'ruida' ? ruida.moveTo(0, 0, speed) : grbl.send(`$J=G90 G21 X0 Y0 F${feed}`));
       return;
     }
     // 버튼 방향은 화면 기준(오른쪽 +, 위쪽 +) → 원점 위치에 따라 기계 축 방향으로 변환
     const [vx, vy] = b.dataset.jog!.split(',').map(Number);
     const dx = (device.origin.includes('right') ? -vx : vx) * step;
     const dy = (device.origin.includes('top') ? -vy : vy) * step;
-    await (c === 'ruida' ? ruida.jog(dx, dy) : grbl.jog(dx, dy, feed));
+    await (c === 'ruida' ? ruida.jog(dx, dy, speed) : grbl.jog(dx, dy, feed));
   });
 });
 

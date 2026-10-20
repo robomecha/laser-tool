@@ -195,22 +195,33 @@ export class RuidaUsbConnection {
     await this.write([0xd8, 0x2a]);
   }
 
+  // 빠른 이동(D9) 옵션 바이트 (MeerK40t 기준): 00 = 원점 기준 절대 좌표, 02 = 현재 위치 기준 상대 이동.
+  // 속도는 직전 C9 02 (µm/s) 값을 따르므로 이동마다 먼저 보낸다.
+
   /** 기계 좌표 (mm) 로 빠른 이동 (레이저 끔) */
-  async moveTo(x: number, y: number): Promise<void> {
-    await this.write([0xd9, 0x10, 0x02, ...encodeNumber(x * 1000), ...encodeNumber(y * 1000)]);
+  async moveTo(x: number, y: number, speedMmS: number): Promise<void> {
+    await this.write([...speedCmd(speedMmS), 0xd9, 0x10, 0x00, ...encodeNumber(x * 1000), ...encodeNumber(y * 1000)]);
   }
 
-  async jog(dx: number, dy: number): Promise<void> {
-    await this.moveTo(this.status.x + dx, this.status.y + dy);
+  /** 현재 위치에서 dx, dy (mm) 만큼 상대 이동 */
+  async jog(dx: number, dy: number, speedMmS: number): Promise<void> {
+    const cmd = [...speedCmd(speedMmS)];
+    if (dx) cmd.push(0xd9, 0x00, 0x02, ...encodeNumber(dx * 1000));
+    if (dy) cmd.push(0xd9, 0x01, 0x02, ...encodeNumber(dy * 1000));
+    await this.write(cmd);
   }
 
   /** 사각 프레임: 모서리를 차례로 이동 (각 이동이 끝날 때까지 대기) */
-  async frame(corners: { x: number; y: number }[]): Promise<void> {
+  async frame(corners: { x: number; y: number }[], speedMmS: number): Promise<void> {
     for (const c of [...corners, corners[0]]) {
-      await this.moveTo(c.x, c.y);
+      await this.moveTo(c.x, c.y, speedMmS);
       await this.waitIdle(20000);
     }
   }
+}
+
+function speedCmd(mmS: number): number[] {
+  return [0xc9, 0x02, ...encodeNumber(Math.max(1, mmS) * 1000)];
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
