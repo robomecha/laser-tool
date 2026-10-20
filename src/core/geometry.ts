@@ -213,6 +213,30 @@ export function ellipsePolyline(cx: number, cy: number, rx: number, ry: number, 
   return { pts, closed: true };
 }
 
+/**
+ * 정다각형 / 별. r = 중심에서 꼭짓점까지 거리, rot = 첫 꼭짓점 각도(라디안, Y 아래 기준).
+ * innerRatio 를 주면 꼭짓점 사이에 안쪽 점(반지름 r*innerRatio)을 넣어 별 모양이 된다.
+ */
+export function regularPolygon(cx: number, cy: number, r: number, sides: number, rot = 0, innerRatio?: number): Polyline {
+  const n = Math.max(3, Math.min(256, Math.round(sides)));
+  const pts: Vec[] = [];
+  const star = innerRatio !== undefined && innerRatio > 0 && innerRatio < 1;
+  const steps = star ? n * 2 : n;
+  for (let i = 0; i < steps; i++) {
+    const a = rot + (i * 2 * Math.PI) / steps;
+    const rr = star && i % 2 ? r * innerRatio! : r;
+    pts.push({ x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) });
+  }
+  return { pts, closed: true };
+}
+
+/** 밑변이 수평이 되는 첫 꼭짓점 각도 (홀수 각형은 꼭짓점이 위로) */
+export function uprightRotation(sides: number): number {
+  const n = Math.max(3, Math.round(sides));
+  // 밑변 가운데가 정확히 아래(+Y, 90°)에 오도록
+  return Math.PI / 2 + Math.PI / n;
+}
+
 export function rectPolyline(x: number, y: number, w: number, h: number): Polyline {
   return {
     pts: [

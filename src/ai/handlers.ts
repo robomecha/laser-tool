@@ -1,7 +1,7 @@
 // MCP 도구 요청 처리기 (tools/mcp-server.mjs 의 도구와 1:1 대응)
 import { DeviceSettings, fromMachine } from '../core/device';
 import { LaserDocument } from '../core/document';
-import { about, arcPoints, BBox, ellipsePolyline, isEmptyBBox, Mat, mul, Polyline, rectPolyline, rotate, scale, translate, Vec } from '../core/geometry';
+import { about, arcPoints, BBox, ellipsePolyline, isEmptyBBox, Mat, mul, Polyline, rectPolyline, regularPolygon, rotate, scale, translate, uprightRotation, Vec } from '../core/geometry';
 import { circularArray, gridArray } from '../core/array';
 import { BoolOp, booleanOp, OffsetJoin, offsetPolylines } from '../core/clip';
 import { DitherMode, LayerMode, LayerSettings, PALETTE } from '../core/layers';
@@ -48,7 +48,7 @@ function roundedRect(x: number, y: number, w: number, h: number, r: number): Pol
 }
 
 interface ShapeSpec {
-  type: 'line' | 'polyline' | 'rect' | 'circle' | 'ellipse' | 'path';
+  type: 'line' | 'polyline' | 'rect' | 'circle' | 'ellipse' | 'polygon' | 'path';
   layer?: number;
   name?: string;
   [k: string]: unknown;
@@ -69,11 +69,19 @@ function specToPaths(s: ShapeSpec): Polyline[] {
       return [ellipsePolyline(n('cx'), n('cy'), n('rx'), n('ry'))];
     case 'path':
       return parsePathData(String(s.d));
+    case 'polygon': {
+      const sides = n('sides');
+      const star = Boolean(s.star);
+      // 기본 방향: 정다각형은 밑변 수평, 별은 꼭짓점이 위. rotation 은 그 기준에서 더 돌린다
+      const base = star ? -Math.PI / 2 : uprightRotation(sides);
+      const rot = base + (Number(s.rotation ?? 0) * Math.PI) / 180;
+      return [regularPolygon(n('cx'), n('cy'), n('r'), sides, rot, star ? Number(s.innerRatio ?? 0.5) : undefined)];
+    }
   }
 }
 
 const NAMES: Record<ShapeSpec['type'], string> = {
-  line: 'Line', polyline: 'Polyline', rect: 'Rectangle', circle: 'Circle', ellipse: 'Ellipse', path: 'Path',
+  line: 'Line', polyline: 'Polyline', rect: 'Rectangle', circle: 'Circle', ellipse: 'Ellipse', polygon: 'Polygon', path: 'Path',
 };
 
 function shapesById(ctx: AiContext, ids: string[]): Shape[] {

@@ -726,3 +726,31 @@ kbd {
   padding: 4px 12px 4px 0;
   vertical-align: top;
 }
+
+#polygon-options {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+#polygon-options[hidden] {
+  display: none;
+}
+#polygon-options .hint {
+  color: var(--muted);
+}
+#polygon-options label.check {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.poly-presets {
+  display: flex;
+  gap: 2px;
+}
+.poly-presets button {
+  padding: 2px 7px;
+}

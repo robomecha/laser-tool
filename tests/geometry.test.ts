@@ -37,3 +37,24 @@ describe('shapes', () => {
     for (const p of pts) close(Math.hypot(p.x - 5, p.y), 5, 1e-6);
   });
 });
+
+describe('regular polygon', () => {
+  it('has n vertices on the circle and a flat bottom when upright', async () => {
+    const { regularPolygon, uprightRotation, bboxOfPolylines } = await import('../src/core/geometry');
+    for (const n of [3, 5, 6, 8]) {
+      const p = regularPolygon(0, 0, 10, n, uprightRotation(n));
+      expect(p.pts).toHaveLength(n);
+      for (const q of p.pts) close(Math.hypot(q.x, q.y), 10);
+      // 가장 아래 두 꼭짓점의 y 가 같다 (밑변 수평)
+      const ys = p.pts.map((q) => q.y).sort((a, b) => b - a);
+      close(ys[0], ys[1]);
+      expect(bboxOfPolylines([p]).maxY).toBeLessThan(10);
+    }
+  });
+  it('makes a star with inner points', async () => {
+    const { regularPolygon } = await import('../src/core/geometry');
+    const s = regularPolygon(0, 0, 10, 5, 0, 0.5);
+    expect(s.pts).toHaveLength(10);
+    close(Math.hypot(s.pts[1].x, s.pts[1].y), 5);
+  });
+});

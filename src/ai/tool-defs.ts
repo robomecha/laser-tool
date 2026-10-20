@@ -20,6 +20,17 @@ const shapeSpec = z.discriminatedUnion('type', [
   z.object({ type: z.literal('circle'), cx: z.number(), cy: z.number(), r: z.number().positive(), ...common }),
   z.object({ type: z.literal('ellipse'), cx: z.number(), cy: z.number(), rx: z.number().positive(), ry: z.number().positive(), ...common }),
   z.object({ type: z.literal('path'), d: z.string().describe('SVG path 데이터, mm 단위 문서 좌표'), ...common }),
+  z.object({
+    type: z.literal('polygon'),
+    cx: z.number(),
+    cy: z.number(),
+    r: z.number().positive().describe('중심에서 꼭짓점까지 mm'),
+    sides: z.number().int().min(3).max(64),
+    star: z.boolean().optional().describe('별 모양'),
+    innerRatio: z.number().min(0.05).max(0.95).optional().describe('별 안쪽 반지름 비율 (기본 0.5)'),
+    rotation: z.number().optional().describe('회전 deg (기본: 밑변 수평, 별은 꼭짓점 위)'),
+    ...common,
+  }),
 ]);
 const ids = z.array(z.string()).min(1).describe('도형 id 목록 (list_shapes / draw 결과에서 얻음)');
 
@@ -35,7 +46,7 @@ export const TOOL_DEFS: ToolDef[] = [
   { name: 'get_canvas_info', description: '작업대 크기, 원점, 사용 중 레이어와 설정, 도형 수, 팔레트 색, 사용 가능한 글꼴을 돌려준다.', shape: {} },
   {
     name: 'draw_shapes',
-    description: '도형을 그린다 (선, 폴리라인/다각형, 사각형, 원, 타원, SVG path). 만든 도형 id 를 돌려준다.',
+    description: '도형을 그린다 (선, 폴리라인/다각형, 사각형, 원, 타원, 정다각형·별, SVG path). 만든 도형 id 를 돌려준다.',
     shape: { shapes: z.array(shapeSpec).min(1) },
   },
   {

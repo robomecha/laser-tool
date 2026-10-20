@@ -37,7 +37,7 @@ const SECTIONS: Section[] = [
     title: { ko: '그리기와 편집', en: 'Drawing and editing' },
     body: {
       ko: `<ul>
-<li><b>도구</b> (왼쪽): 선택 ${kbd('S')}, 선/폴리라인 ${kbd('L')} (더블클릭·Enter·우클릭으로 완료, 첫 점 클릭 시 닫힘), 사각형 ${kbd('R')}, 타원 ${kbd('E')}, 텍스트 ${kbd('T')}, 화면 이동 ${kbd('H')}. ${kbd('Shift')} 를 누르면 정사각형/원, 45° 각도.</li>
+<li><b>도구</b> (왼쪽): 선택 ${kbd('S')}, 선/폴리라인 ${kbd('L')} (더블클릭·Enter·우클릭으로 완료, 첫 점 클릭 시 닫힘), 사각형 ${kbd('R')}, 타원 ${kbd('E')}, 정다각형·별 ${kbd('N')} (중심에서 드래그, 위쪽 막대에서 변의 수·별 모양), 텍스트 ${kbd('T')}, 화면 이동 ${kbd('H')}. ${kbd('Shift')} 를 누르면 정사각형/원, 45° 각도.</li>
 <li><b>선택</b>: 클릭, ${kbd('Shift')}/${kbd('Ctrl')}+클릭으로 추가. 왼쪽→오른쪽 박스는 완전히 포함된 도형, 오른쪽→왼쪽 박스는 걸친 도형을 선택합니다.</li>
 <li><b>변형</b>: 모서리 핸들(비율 유지, ${kbd('Shift')} 자유), 가장자리 핸들, 위쪽 초록 핸들로 회전(${kbd('Shift')} 15° 단위). 상단 X·Y·W·H·회전 칸에 숫자로도 입력합니다. 화살표 키로 1mm(${kbd('Shift')} 10mm) 이동.</li>
 <li><b>편집</b>: 잘라내기·복사·붙여넣기·복제·삭제, 정렬, 반전, 90° 회전, 작업대 중앙.</li>
@@ -46,7 +46,7 @@ const SECTIONS: Section[] = [
 <li><b>스냅</b>: 상단 오른쪽에서 눈금 간격(1mm 단위), 스냅 켜기/끄기(${kbd('G')})와 간격, 점 스냅(꼭짓점·중심에 붙기)을 설정합니다.</li>
 </ul>`,
       en: `<ul>
-<li><b>Tools</b> (left): Select ${kbd('S')}, Line/polyline ${kbd('L')} (finish with double-click, Enter or right-click; click the first point to close), Rectangle ${kbd('R')}, Ellipse ${kbd('E')}, Text ${kbd('T')}, Pan ${kbd('H')}. Hold ${kbd('Shift')} for squares/circles and 45° angles.</li>
+<li><b>Tools</b> (left): Select ${kbd('S')}, Line/polyline ${kbd('L')} (finish with double-click, Enter or right-click; click the first point to close), Rectangle ${kbd('R')}, Ellipse ${kbd('E')}, Polygon/star ${kbd('N')} (drag from the center; set sides and star in the bar above), Text ${kbd('T')}, Pan ${kbd('H')}. Hold ${kbd('Shift')} for squares/circles and 45° angles.</li>
 <li><b>Selecting</b>: click, ${kbd('Shift')}/${kbd('Ctrl')}+click to add. A left-to-right box selects shapes fully inside it; a right-to-left box selects anything it touches.</li>
 <li><b>Transform</b>: corner handles keep proportions (${kbd('Shift')} for free), edge handles stretch, the green handle rotates (${kbd('Shift')} snaps to 15°). You can also type X, Y, W, H and rotation in the top bar. Arrow keys nudge 1mm (${kbd('Shift')} 10mm).</li>
 <li><b>Edit</b>: cut, copy, paste, duplicate, delete, align, mirror, rotate 90°, center on bed.</li>
@@ -141,7 +141,7 @@ const SECTIONS: Section[] = [
     title: { ko: '단축키', en: 'Shortcuts' },
     body: {
       ko: `<table class="keys">
-<tr><td>${kbd('S')} ${kbd('L')} ${kbd('R')} ${kbd('E')} ${kbd('T')} ${kbd('H')}</td><td>선택 / 선 / 사각형 / 타원 / 텍스트 / 화면 이동</td></tr>
+<tr><td>${kbd('S')} ${kbd('L')} ${kbd('R')} ${kbd('E')} ${kbd('N')} ${kbd('T')} ${kbd('H')}</td><td>선택 / 선 / 사각형 / 타원 / 정다각형 / 텍스트 / 화면 이동</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('Z')} / ${kbd('Ctrl')}+${kbd('Y')}</td><td>실행 취소 / 다시 실행</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('X')} ${kbd('C')} ${kbd('V')} ${kbd('D')}</td><td>잘라내기 / 복사 / 붙여넣기 / 복제</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('A')} · ${kbd('Ctrl')}+${kbd('Shift')}+${kbd('A')}</td><td>모두 선택 · 격자 배열</td></tr>
@@ -153,7 +153,7 @@ const SECTIONS: Section[] = [
 <tr><td>${kbd('F1')}</td><td>도움말</td></tr>
 </table>`,
       en: `<table class="keys">
-<tr><td>${kbd('S')} ${kbd('L')} ${kbd('R')} ${kbd('E')} ${kbd('T')} ${kbd('H')}</td><td>Select / Line / Rectangle / Ellipse / Text / Pan</td></tr>
+<tr><td>${kbd('S')} ${kbd('L')} ${kbd('R')} ${kbd('E')} ${kbd('N')} ${kbd('T')} ${kbd('H')}</td><td>Select / Line / Rectangle / Ellipse / Polygon / Text / Pan</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('Z')} / ${kbd('Ctrl')}+${kbd('Y')}</td><td>Undo / Redo</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('X')} ${kbd('C')} ${kbd('V')} ${kbd('D')}</td><td>Cut / Copy / Paste / Duplicate</td></tr>
 <tr><td>${kbd('Ctrl')}+${kbd('A')} · ${kbd('Ctrl')}+${kbd('Shift')}+${kbd('A')}</td><td>Select all · Grid array</td></tr>

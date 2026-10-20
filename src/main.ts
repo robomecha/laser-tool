@@ -441,6 +441,7 @@ view.onShapeDoubleClick = (s) => {
 };
 
 function setTool(t: Tool): void {
+  $('polygon-options').hidden = t !== 'polygon';
   view.setTool(t);
   textTool.setActive(t === 'text');
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
@@ -521,7 +522,7 @@ window.addEventListener('keydown', (e) => {
     const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key]!;
     return doc.transformSelected(translate(d[0], d[1]));
   }
-  const tools: Record<string, Tool> = { s: 'select', l: 'line', r: 'rect', e: 'ellipse', t: 'text', h: 'pan' };
+  const tools: Record<string, Tool> = { s: 'select', l: 'line', r: 'rect', e: 'ellipse', n: 'polygon', t: 'text', h: 'pan' };
   if (tools[k]) return setTool(tools[k]);
   if (k === 'p') return run('preview');
   if (k === 'o') return run('offset');
@@ -740,6 +741,27 @@ consoleInput.onkeydown = (e) => {
   }
   guard(() => grbl.send(cmd))();
 };
+
+// ---------------- 정다각형 도구 설정 ----------------
+
+const polySides = $<HTMLInputElement>('poly-sides');
+const polyStar = $<HTMLInputElement>('poly-star');
+const polyInner = $<HTMLInputElement>('poly-inner');
+function applyPolygonSettings(): void {
+  view.polygonSides = Math.max(3, Math.min(64, Math.round(Number(polySides.value) || 6)));
+  polySides.value = String(view.polygonSides);
+  view.polygonStar = polyStar.checked;
+  view.polygonInner = Math.max(0.05, Math.min(0.95, (Number(polyInner.value) || 50) / 100));
+  polyInner.disabled = !polyStar.checked;
+}
+for (const el of [polySides, polyStar, polyInner]) el.onchange = applyPolygonSettings;
+document.querySelectorAll<HTMLButtonElement>('[data-sides]').forEach((b) => {
+  b.onclick = () => {
+    polySides.value = b.dataset.sides!;
+    applyPolygonSettings();
+  };
+});
+applyPolygonSettings();
 
 // ---------------- 눈금 / 스냅 ----------------
 

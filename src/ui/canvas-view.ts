@@ -11,9 +11,11 @@ import {
   mul,
   Polyline,
   rectPolyline,
+  regularPolygon,
   rotate,
   scale,
   translate,
+  uprightRotation,
   Vec,
 } from '../core/geometry';
 import { layerColor } from '../core/layers';
@@ -21,7 +23,7 @@ import { makeVector, shapeBBox, hitTest, Shape, worldPaths } from '../core/shape
 import { Job } from '../cam/job';
 import { cachedImageEl } from '../io/image-import';
 
-export type Tool = 'select' | 'line' | 'rect' | 'ellipse' | 'text' | 'pan';
+export type Tool = 'select' | 'line' | 'rect' | 'ellipse' | 'polygon' | 'text' | 'pan';
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rot';
 
@@ -31,7 +33,7 @@ type Drag =
   | { kind: 'scale'; handle: Handle; box: BBox; orig: Map<string, Mat> }
   | { kind: 'rotate'; center: Vec; a0: number; orig: Map<string, Mat> }
   | { kind: 'band'; start: Vec; cur: Vec; additive: boolean }
-  | { kind: 'shape'; tool: 'rect' | 'ellipse'; start: Vec; cur: Vec };
+  | { kind: 'shape'; tool: 'rect' | 'ellipse' | 'polygon'; start: Vec; cur: Vec; free?: boolean };
 
 const HANDLE_PX = 7;
 
@@ -61,6 +63,12 @@ export class CanvasView {
   hiddenShapeId: string | null = null;
   /** 매 렌더링 후 (화면 위 HTML 오버레이 위치 갱신용) */
   onRendered: () => void = () => {};
+
+  /** 정다각형 도구 설정 */
+  polygonSides = 6;
+  polygonStar = false;
+  /** 별 안쪽 꼭짓점 반지름 비율 (0~1) */
+  polygonInner = 0.5;
 
   /** 눈금(그리드) 간격 mm */
   gridStep = 10;
@@ -270,6 +278,7 @@ export class CanvasView {
       }
       case 'rect':
       case 'ellipse':
+      case 'polygon':
         {
           const p = this.snapPoint(w);
           this.drag = { kind: 'shape', tool: this.tool, start: p, cur: p };
@@ -288,6 +297,17 @@ export class CanvasView {
         return;
       }
     }
+  }
+
+  /** 중심 c 에서 커서 p 까지 드래그한 정다각형 (반지름 = 거리). free 면 커서 쪽으로 꼭짓점 */
+  private polygonFromDrag(c: Vec, p: Vec, free: boolean): Polyline | null {
+    const r = Math.hypot(p.x - c.x, p.y - c.y);
+    if (r < 0.1) return null;
+    const n = this.polygonSides;
+    let rot: number;
+    if (free) rot = Math.round(Math.atan2(p.y - c.y, p.x - c.x) / (Math.PI / 12)) * (Math.PI / 12);
+    else rot = this.polygonStar ? -Math.PI / 2 : uprightRotation(n);
+    return regularPolygon(c.x, c.y, r, n, rot, this.polygonStar ? this.polygonInner : undefined);
   }
 
   /** 그리드 스냅만 */
@@ -363,7 +383,7 @@ export class CanvasView {
         };
         this.canvas.style.cursor = h ? cursors[h] : this.shapeAt(w) ? 'move' : 'default';
       }
-      if (this.tool === 'line' || this.tool === 'rect' || this.tool === 'ellipse' || this.tool === 'text') {
+      if (this.tool === 'line' || this.tool === 'rect' || this.tool === 'ellipse' || this.tool === 'polygon' || this.tool === 'text') {
         this.cursor = this.snapPoint(w);
         this.requestRender();
       }
@@ -426,7 +446,10 @@ export class CanvasView {
       case 'band':
       case 'shape':
         d.cur = d.kind === 'shape' ? this.snapPoint(w) : w;
-        if (d.kind === 'shape' && e.shiftKey) {
+        if (d.kind === 'shape' && d.tool === 'polygon') {
+          // 정다각형: 중심에서 드래그, Shift 면 드래그 방향으로 회전
+          d.free = e.shiftKey;
+        } else if (d.kind === 'shape' && e.shiftKey) {
           const side = Math.max(Math.abs(w.x - d.start.x), Math.abs(w.y - d.start.y));
           d.cur = { x: d.start.x + Math.sign(w.x - d.start.x || 1) * side, y: d.start.y + Math.sign(w.y - d.start.y || 1) * side };
         }
@@ -468,7 +491,14 @@ export class CanvasView {
       if (!d.additive && Math.hypot(b.maxX - b.minX, b.maxY - b.minY) * this.zoom < 3) this.doc.clearSelection();
       else this.doc.select(ids, d.additive);
     }
-    if (d.kind === 'shape') {
+    if (d.kind === 'shape' && d.tool === 'polygon') {
+      const path = this.polygonFromDrag(d.start, d.cur, Boolean(d.free));
+      if (path) {
+        const n = this.polygonSides;
+        this.doc.add(makeVector([path], this.doc.currentLayer, this.polygonStar ? `Star ${n}` : `Polygon ${n}`));
+        this.onToolDone();
+      }
+    } else if (d.kind === 'shape') {
       const x = Math.min(d.start.x, d.cur.x);
       const y = Math.min(d.start.y, d.cur.y);
       const w = Math.abs(d.cur.x - d.start.x);
@@ -666,7 +696,21 @@ export class CanvasView {
       ctx.strokeRect(x, y, w, h);
       ctx.setLineDash([]);
     }
-    if (d?.kind === 'shape') {
+    if (d?.kind === 'shape' && d.tool === 'polygon') {
+      const path = this.polygonFromDrag(d.start, d.cur, Boolean(d.free));
+      if (path) {
+        ctx.strokeStyle = layerColor(this.doc.currentLayer);
+        ctx.beginPath();
+        ctx.moveTo(path.pts[0].x, path.pts[0].y);
+        for (const q of path.pts.slice(1)) ctx.lineTo(q.x, q.y);
+        ctx.closePath();
+        ctx.stroke();
+        // 중심 표시
+        ctx.beginPath();
+        ctx.arc(d.start.x, d.start.y, 2 * px, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else if (d?.kind === 'shape') {
       const x = Math.min(d.start.x, d.cur.x);
       const y = Math.min(d.start.y, d.cur.y);
       const w = Math.abs(d.cur.x - d.start.x);
@@ -708,7 +752,7 @@ export class CanvasView {
       for (const p of this.poly) ctx.fillRect(p.x - 2 * px, p.y - 2 * px, 4 * px, 4 * px);
     }
     // 스냅 표시: 점 스냅은 자홍색 사각형, 그리드 스냅은 작은 십자
-    if (['line', 'rect', 'ellipse', 'text'].includes(this.tool)) {
+    if (['line', 'rect', 'ellipse', 'polygon', 'text'].includes(this.tool)) {
       const c = this.cursor;
       ctx.lineWidth = 1.5 * px;
       if (this.snapHit) {

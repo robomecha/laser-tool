@@ -96,6 +96,21 @@
       </span>
     </div>
 
+    <div id="polygon-options" hidden>
+      <strong>정다각형</strong>
+      <label>변의 수 <input id="poly-sides" type="number" min="3" max="64" step="1" value="6" /></label>
+      <span class="poly-presets">
+        <button type="button" data-sides="3" title="삼각형">△</button>
+        <button type="button" data-sides="4" title="사각형 (마름모)">◇</button>
+        <button type="button" data-sides="5" title="오각형">⬠</button>
+        <button type="button" data-sides="6" title="육각형">⬡</button>
+        <button type="button" data-sides="8" title="팔각형">⯃</button>
+      </span>
+      <label class="check"><input id="poly-star" type="checkbox" /> ★ 별 모양</label>
+      <label title="별의 안쪽 꼭짓점 반지름 (바깥 대비 %)">안쪽 비율 <input id="poly-inner" type="number" min="5" max="95" step="5" value="50" /> %</label>
+      <span class="hint">중심에서 바깥으로 드래그 · Shift: 드래그 방향으로 회전 · 크기는 위쪽 W/H 로 조정</span>
+    </div>
+
     <div id="text-options" hidden>
       <strong>텍스트</strong>
       <label>글꼴 <select id="text-family"></select></label>
@@ -125,6 +140,7 @@
         <button data-tool="line" title="선 / 폴리라인 (L) – 더블클릭·Enter 로 완료">╱</button>
         <button data-tool="rect" title="사각형 (R) – Shift: 정사각형">▭</button>
         <button data-tool="ellipse" title="타원 (E) – Shift: 원">◯</button>
+        <button data-tool="polygon" title="정다각형 (N) – 중심에서 드래그, Shift: 드래그 방향으로 회전">⬡</button>
         <button data-tool="text" title="텍스트 (T) – 클릭한 위치에 입력">T</button>
         <button data-tool="pan" title="화면 이동 (H) – 가운데 버튼 드래그로도 가능">✋</button>
         <hr />

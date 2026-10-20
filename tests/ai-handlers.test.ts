@@ -77,3 +77,23 @@ describe('AI array tool', () => {
     expect(() => handlers.array_shapes(ctx, { ids: [r.created[0].id], kind: 'circular', count: 3 })).toThrow(/center/);
   });
 });
+
+describe('AI polygon shapes', () => {
+  it('draws a hexagon and a 5-point star', async () => {
+    const ctx = makeCtx();
+    const r = (await handlers.draw_shapes(ctx, {
+      shapes: [
+        { type: 'polygon', cx: 50, cy: 50, r: 20, sides: 6 },
+        { type: 'polygon', cx: 120, cy: 50, r: 20, sides: 5, star: true, innerRatio: 0.4 },
+      ],
+    })) as Created;
+    const [hex, star] = ctx.doc.shapes;
+    if (hex.type !== 'vector' || star.type !== 'vector') throw new Error();
+    expect(hex.paths[0].pts).toHaveLength(6);
+    expect(star.paths[0].pts).toHaveLength(10);
+    // 별은 꼭짓점이 위: 위쪽 끝이 중심에서 r 만큼
+    expect(r.created[1].bbox.y).toBeCloseTo(30);
+    // 육각형 밑변 수평: 높이 = r*sqrt(3)
+    expect(r.created[0].bbox.height).toBeCloseTo(20 * Math.sqrt(3), 1);
+  });
+});

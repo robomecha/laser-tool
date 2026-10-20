@@ -400,4 +400,18 @@ export const EN: Record<string, string> = {
   '텍스트 수정 중 – Enter 확정 · Esc 취소': 'Editing text – Enter confirms · Esc cancels',
   '내용이 비어 있어 원래 텍스트를 유지했습니다 (지우려면 Del)': 'The text was empty, so the original was kept (press Del to delete it)',
   '텍스트를 수정했습니다': 'Text updated',
+
+  // ---- 정다각형 ----
+  '정다각형 (N) – 중심에서 드래그, Shift: 드래그 방향으로 회전': 'Polygon (N) – drag from the center, Shift: rotate toward the drag',
+  '정다각형': 'Polygon',
+  '변의 수': 'Sides',
+  '삼각형': 'Triangle',
+  '사각형 (마름모)': 'Square (diamond)',
+  '오각형': 'Pentagon',
+  '육각형': 'Hexagon',
+  '팔각형': 'Octagon',
+  '★ 별 모양': '★ Star',
+  '별의 안쪽 꼭짓점 반지름 (바깥 대비 %)': 'Inner point radius of the star (% of the outer radius)',
+  '안쪽 비율': 'Inner ratio',
+  '중심에서 바깥으로 드래그 · Shift: 드래그 방향으로 회전 · 크기는 위쪽 W/H 로 조정': 'Drag outward from the center · Shift: rotate toward the drag · fine-tune size with W/H above',
 };
