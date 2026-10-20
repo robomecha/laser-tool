@@ -29,7 +29,7 @@ npm run build:exe
 | `사용법.txt` | 간단한 안내 |
 
 * Node 단일 실행 파일(SEA) 에 앱 파일과 서버(`server/standalone.ts`)를 넣은 구조라 Node 설치가 필요 없습니다.
-* 앱 창은 전용 프로필(`%LOCALAPPDATA%\LaserToolrowser`)을 써서 USB·글꼴 권한과 설정이 일반 브라우저와 섞이지 않습니다. 로그: `%LOCALAPPDATA%\LaserTool\log.txt`.
+* 앱 창은 전용 프로필(`%LOCALAPPDATA%\LaserTool\browser`)을 써서 USB·글꼴 권한과 설정이 일반 브라우저와 섞이지 않습니다. 로그: `%LOCALAPPDATA%\LaserTool\log.txt`.
 * 코드 서명이 없어 처음 실행 시 Windows SmartScreen 경고가 나오면 [추가 정보] → [실행].
 
 ## 주요 기능 (v0.1)
