@@ -35,6 +35,17 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 * `ImageShape`: data URL + 로컬 크기(mm) + 아핀 변환. 픽셀 데이터는 `io/image-import.ts` 에서 캐시.
 * 모든 도형은 **색상 레이어 인덱스 하나**에 속한다 (LightBurn 과 동일한 방식).
 
+### 텍스트 (`core/text.ts`)
+* `opentype.js` 가 만든 경로 명령(M/L/Q/C/Z)을 0.02mm 오차로 평탄화한다. 글꼴 윤곽선은 항상 닫힌 것으로 처리한다
+  (opentype.js 2.x 는 일부 TrueType 글꼴에서 Z 를 생략).
+* 첫 줄 기준선의 정렬 기준점이 로컬 (0,0), 다음 줄은 +Y. 클릭 위치는 도형 `transform` 의 이동으로 들어간다.
+* 기본 글꼴은 `@expo-google-fonts/nanum-gothic` 의 TTF (빌드 시 asset 으로 복사, 처음 쓸 때 내려받음). WOFF2 는 미지원.
+
+### 오프셋 / 불리언 (`core/clip.ts`)
+* Clipper 1 (`clipper-lib`) 사용, mm×1000 정수 좌표. (`clipper2-js` 는 결과 경로가 깨져 사용하지 않음)
+* 각 도형의 닫힌 경로를 먼저 짝홀 규칙으로 정규화한 뒤 도형끼리는 NonZero 로 연산 → 도형 내부 구멍이 보존된다.
+* 빼기는 **처음 선택한 도형**에서 나머지를 뺀다. 열린 경로는 불리언에서 무시, 오프셋(바깥)에서는 양쪽으로 두께를 준 외곽선이 된다.
+
 ### Job (`cam/job.ts`)
 블록(레이어·패스 단위) 안에 `{x, y, p}` 이동 목록. `p<0` 급속 이동, `p=0` 레이저 끈 가공 속도 이동(오버스캔), `p>0` 출력 %.
 출력기는 이 표현만 알면 되므로 새 컨트롤러(예: Marlin, Smoothieware, EZCAD 갈바노)를 추가하기 쉽다.
@@ -55,8 +66,8 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 | Device Settings | Vendor / User Settings | 장비 설정 대화상자 | ✅ (기본 항목) |
 | GRBL 연결 | – | Web Serial | ✅ |
 | Ruida 연결 | USB / Ethernet | .rd 내보내기 + UDP 도구 | 🧪 실험적 |
-| Text 도구 | Text | – | ⏳ (opentype.js 로 글꼴 → 경로) |
-| Offset, Boolean (Weld/Union/Subtract) | Offset | – | ⏳ (clipper 계열 라이브러리) |
+| Text 도구 | Text | `core/text.ts`, `io/font.ts`, `ui/text-tool.ts` | ✅ (생성 시 경로로 변환, 재편집 불가) |
+| Offset, Boolean (Weld/Union/Subtract) | Offset | `core/clip.ts` (clipper-lib) | ✅ (오프셋, 합치기/빼기/교집합) |
 | Node 편집 | Edit Nodes | – | ⏳ |
 | Array / Grid copy | Array | – | ⏳ |
 | Tabs/Bridges | – | – | ⏳ |
@@ -80,7 +91,7 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 
 ## 5. 로드맵
 
-1. **편집 강화**: 텍스트, 노드 편집, 오프셋/불리언, 배열 복사, 그룹, 스냅(그리드·객체), 레이어 순서 변경
+1. **편집 강화**: 텍스트 재편집(텍스트 도형 타입), 원/경로 위 텍스트, 노드 편집, 배열 복사, 그룹, 스냅(그리드·객체), 레이어 순서 변경
 2. **CAM 강화**: 경로 2-opt 최적화, 방향 지정, 리드인/아웃, 탭, 코너 감속, 채우기 "도형별" 모드, 크로스해치
 3. **장비**: 시작 위치 옵션(현재 위치/사용자 원점), 작업 재개, 재료 라이브러리, Ruida 실시간 제어(조그/프레임), Marlin/Smoothie
 4. **데스크톱 패키징**: Electron 또는 Tauri (USB·UDP 네이티브 접근, 파일 연동)

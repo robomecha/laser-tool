@@ -117,6 +117,19 @@ export class LaserDocument {
     this.emit('all');
   }
 
+  /** 도형 일부를 지우고 새 도형으로 바꾼다 (불리언 연산 등). 실행 취소 한 번으로 되돌린다. */
+  replace(removeIds: Iterable<string>, shapes: Shape[]): void {
+    const rm = new Set(removeIds);
+    this.checkpoint();
+    this.shapes = this.shapes.filter((s) => !rm.has(s.id));
+    for (const s of shapes) {
+      this.layer(s.layer);
+      this.shapes.push(s);
+    }
+    this.selection = new Set(shapes.map((s) => s.id));
+    this.emit('all');
+  }
+
   get(id: string): Shape | undefined {
     return this.shapes.find((s) => s.id === id);
   }

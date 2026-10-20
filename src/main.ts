@@ -3,7 +3,8 @@ import { DeviceSettings, fromMachine, loadDevice, saveDevice, toMachine } from '
 import { LaserDocument } from './core/document';
 import { about, isEmptyBBox, Mat, rotate, scale, translate } from './core/geometry';
 import { layerColor, PALETTE } from './core/layers';
-import { cloneShape, ImageShape, Shape, shapeBBox } from './core/shapes';
+import { BoolOp, booleanOp, OffsetJoin, offsetPolylines } from './core/clip';
+import { cloneShape, ImageShape, makeVector, Shape, shapeBBox, VectorShape, worldPaths } from './core/shapes';
 import { estimateJob, formatDuration, Job, jobBBox } from './cam/job';
 import { planJob } from './cam/planner';
 import { GrblConnection } from './device/grbl-serial';
@@ -15,6 +16,7 @@ import { jobToGcode } from './output/gcode';
 import { jobToRuidaFile } from './output/ruida';
 import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
+import { TextTool } from './ui/text-tool';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -22,6 +24,7 @@ let device: DeviceSettings = loadDevice();
 const doc = new LaserDocument();
 const view = new CanvasView($<HTMLCanvasElement>('view'), doc, () => device);
 new LayerPanel(doc, document.querySelector('#layer-table tbody')!, $('layer-editor'));
+const textTool = new TextTool(doc, view);
 const grbl = new GrblConnection();
 let clipboard: Shape[] = [];
 let projectName = 'untitled';
@@ -51,6 +54,8 @@ view.onCursor = (p) => {
 };
 view.onZoom = (z) => ($('status-zoom').textContent = `${Math.round(z * 100) / 100} px/mm`);
 view.onToolDone = () => {};
+textTool.onStatus = (m) => status(m);
+textTool.onDone = () => status('텍스트를 추가했습니다 (경로로 변환됨)');
 
 // ---------------- 팔레트 ----------------
 
@@ -292,6 +297,43 @@ function transformAroundSelection(m: Mat): void {
   doc.transformSelected(about(m, (b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2));
 }
 
+// ---------------- 오프셋 / 불리언 ----------------
+
+function selectedVectors(): VectorShape[] {
+  return doc.selected().filter((s): s is VectorShape => s.type === 'vector');
+}
+
+function offsetSelected(): void {
+  const shapes = selectedVectors();
+  const delta = Number($<HTMLInputElement>('offset-dist').value);
+  if (!shapes.length) return status('오프셋할 벡터 도형을 선택하세요');
+  if (!delta) return status('오프셋 거리를 입력하세요 (양수: 바깥, 음수: 안쪽)');
+  const join = $<HTMLSelectElement>('offset-join').value as OffsetJoin;
+  const out: Shape[] = [];
+  for (const s of shapes) {
+    const paths = offsetPolylines(worldPaths(s), delta, { join });
+    if (paths.length) out.push(makeVector(paths, s.layer, `${s.name} 오프셋`));
+  }
+  if (!out.length) return status('오프셋 결과가 없습니다 (안쪽 오프셋이 도형보다 크거나 닫힌 도형이 아닙니다)');
+  doc.add(out);
+  status(`오프셋 ${delta > 0 ? '바깥' : '안쪽'} ${Math.abs(delta)} mm: 도형 ${out.length}개 생성`);
+}
+
+const BOOL_NAMES: Record<BoolOp, string> = { union: '합치기', difference: '빼기', intersection: '교집합', xor: '배타적 합' };
+
+function booleanSelected(op: BoolOp): void {
+  // 선택한 순서 유지 (빼기: 처음 선택한 도형에서 나머지를 뺀다)
+  const shapes = [...doc.selection].map((id) => doc.get(id)).filter((s): s is VectorShape => s?.type === 'vector');
+  if (shapes.length < 2) return status(`${BOOL_NAMES[op]}: 닫힌 벡터 도형을 2개 이상 선택하세요`);
+  const paths = booleanOp(op, shapes.map((s) => worldPaths(s)));
+  if (!paths.length) return status(`${BOOL_NAMES[op]}: 결과가 비어 있습니다 (겹치는 닫힌 도형이 없습니다)`);
+  doc.replace(
+    shapes.map((s) => s.id),
+    [makeVector(paths, shapes[0].layer, BOOL_NAMES[op])],
+  );
+  status(`${BOOL_NAMES[op]}: 경로 ${paths.length}개`);
+}
+
 const commands: Record<string, () => void | Promise<void>> = {
   new: () => {
     if (doc.shapes.length && !confirm('현재 작업을 지우고 새로 시작할까요?')) return;
@@ -336,6 +378,10 @@ const commands: Record<string, () => void | Promise<void>> = {
     if (isEmptyBBox(b)) return;
     doc.transformSelected(translate(device.bedWidth / 2 - (b.minX + b.maxX) / 2, device.bedHeight / 2 - (b.minY + b.maxY) / 2));
   },
+  offset: () => offsetSelected(),
+  'bool-union': () => booleanSelected('union'),
+  'bool-difference': () => booleanSelected('difference'),
+  'bool-intersection': () => booleanSelected('intersection'),
   preview: () => (view.previewJob ? closePreview() : openPreview()),
   device: () => openDeviceDialog(),
   'zoom-fit': () => view.zoomToFit(),
@@ -361,6 +407,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-cmd]').forEach((b) => {
 
 function setTool(t: Tool): void {
   view.setTool(t);
+  textTool.setActive(t === 'text');
   document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
 }
 document.querySelectorAll<HTMLButtonElement>('[data-tool]').forEach((b) => {
@@ -434,9 +481,10 @@ window.addEventListener('keydown', (e) => {
     const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key]!;
     return doc.transformSelected(translate(d[0], d[1]));
   }
-  const tools: Record<string, Tool> = { s: 'select', l: 'line', r: 'rect', e: 'ellipse', h: 'pan' };
+  const tools: Record<string, Tool> = { s: 'select', l: 'line', r: 'rect', e: 'ellipse', t: 'text', h: 'pan' };
   if (tools[k]) return setTool(tools[k]);
   if (k === 'p') return run('preview');
+  if (k === 'o') return run('offset');
   if (k === 'f') return run('zoom-fit');
 });
 

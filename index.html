@@ -41,6 +41,20 @@
         <button data-cmd="center-bed" title="작업대 중앙으로">⌖</button>
       </div>
       <div class="group">
+        <input id="offset-dist" type="number" value="1" step="0.1" title="오프셋 거리 (mm) – 양수: 바깥, 음수: 안쪽" />
+        <select id="offset-join" title="오프셋 모서리 형태">
+          <option value="round">둥글게</option>
+          <option value="miter">뾰족하게</option>
+          <option value="square">각지게</option>
+        </select>
+        <button data-cmd="offset" title="선택 도형 오프셋 (O) – 원본은 유지">오프셋</button>
+      </div>
+      <div class="group">
+        <button data-cmd="bool-union" title="합치기 (Weld/Union) – 선택한 도형을 하나로 합침">합치기</button>
+        <button data-cmd="bool-difference" title="빼기 (Subtract) – 처음 선택한 도형에서 나머지를 뺌">빼기</button>
+        <button data-cmd="bool-intersection" title="교집합 (Intersect) – 겹치는 부분만 남김">교집합</button>
+      </div>
+      <div class="group">
         <button data-cmd="preview" title="가공 미리보기 (P)">미리보기</button>
         <button data-cmd="device" title="장비 설정">장비 설정</button>
       </div>
@@ -56,12 +70,30 @@
       <span class="hint">mm · 선택 영역 왼쪽 위 기준</span>
     </div>
 
+    <div id="text-options" hidden>
+      <strong>텍스트</strong>
+      <label>글꼴 <select id="text-font"></select></label>
+      <button id="text-font-upload" title="TTF / OTF / WOFF 글꼴 파일 불러오기">글꼴 불러오기…</button>
+      <label>크기 <input id="text-size" type="number" value="10" min="0.5" step="0.5" /> mm</label>
+      <label>자간 <input id="text-spacing" type="number" value="0" step="0.01" title="em 비율" /></label>
+      <label>줄 간격 <input id="text-line" type="number" value="1.2" min="0.5" step="0.1" /></label>
+      <label>정렬
+        <select id="text-align">
+          <option value="left">왼쪽</option>
+          <option value="center">가운데</option>
+          <option value="right">오른쪽</option>
+        </select>
+      </label>
+      <span class="hint">작업대를 클릭해 입력 · Enter 확정 · Shift+Enter 줄바꿈 · Esc 취소</span>
+    </div>
+
     <div id="main">
       <nav id="toolbar">
         <button data-tool="select" class="active" title="선택 (S)">⬚</button>
         <button data-tool="line" title="선 / 폴리라인 (L) – 더블클릭·Enter 로 완료">╱</button>
         <button data-tool="rect" title="사각형 (R) – Shift: 정사각형">▭</button>
         <button data-tool="ellipse" title="타원 (E) – Shift: 원">◯</button>
+        <button data-tool="text" title="텍스트 (T) – 클릭한 위치에 입력">T</button>
         <button data-tool="pan" title="화면 이동 (H) – 가운데 버튼 드래그로도 가능">✋</button>
         <hr />
         <button data-cmd="zoom-fit" title="작업대 전체 보기 (F)">⤢</button>
@@ -78,6 +110,7 @@
           <button id="preview-close">닫기</button>
         </div>
         <div id="drop-hint" hidden>파일을 놓아 가져오기</div>
+        <textarea id="text-input" hidden rows="1" placeholder="텍스트 입력"></textarea>
       </div>
 
       <aside id="side">
@@ -183,6 +216,7 @@
 
     <input id="file-open" type="file" accept=".ltp,.json" hidden />
     <input id="file-import" type="file" accept=".svg,.dxf,.png,.jpg,.jpeg,.bmp,.gif,.webp" multiple hidden />
+    <input id="file-font" type="file" accept=".ttf,.otf,.woff" hidden />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

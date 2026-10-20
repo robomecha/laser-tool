@@ -9,6 +9,7 @@ import {
   isEmptyBBox,
   Mat,
   mul,
+  Polyline,
   rectPolyline,
   rotate,
   scale,
@@ -20,7 +21,7 @@ import { makeVector, shapeBBox, hitTest, Shape, worldPaths } from '../core/shape
 import { Job } from '../cam/job';
 import { cachedImageEl } from '../io/image-import';
 
-export type Tool = 'select' | 'line' | 'rect' | 'ellipse' | 'pan';
+export type Tool = 'select' | 'line' | 'rect' | 'ellipse' | 'text' | 'pan';
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rot';
 
@@ -50,6 +51,12 @@ export class CanvasView {
   onCursor: (p: Vec) => void = () => {};
   onZoom: (z: number) => void = () => {};
   onToolDone: () => void = () => {};
+  /** 텍스트 도구로 작업대를 클릭했을 때 (문서 좌표) */
+  onTextClick: (p: Vec) => void = () => {};
+  /** 입력 중인 텍스트 미리보기 (문서 좌표 폴리라인) 와 기준점 */
+  textPreview: { anchor: Vec; paths: Polyline[] } | null = null;
+  /** 매 렌더링 후 (화면 위 HTML 오버레이 위치 갱신용) */
+  onRendered: () => void = () => {};
 
   private ctx: CanvasRenderingContext2D;
   private drag: Drag | null = null;
@@ -103,7 +110,7 @@ export class CanvasView {
   setTool(t: Tool): void {
     this.cancelTool();
     this.tool = t;
-    this.canvas.style.cursor = t === 'pan' ? 'grab' : t === 'select' ? 'default' : 'crosshair';
+    this.canvas.style.cursor = t === 'pan' ? 'grab' : t === 'select' ? 'default' : t === 'text' ? 'text' : 'crosshair';
     this.requestRender();
   }
 
@@ -244,6 +251,9 @@ export class CanvasView {
       case 'rect':
       case 'ellipse':
         this.drag = { kind: 'shape', tool: this.tool, start: w, cur: w };
+        return;
+      case 'text':
+        this.onTextClick(w);
         return;
       case 'line': {
         if (this.poly.length > 2 && dist(this.toScreen(this.poly[0]), s) < 8) {
@@ -420,6 +430,7 @@ export class CanvasView {
     // 화면 좌표 오버레이
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (!this.previewJob) this.drawSelection();
+    this.onRendered();
   }
 
   private drawBed(px: number): void {
@@ -584,6 +595,26 @@ export class CanvasView {
       ctx.beginPath();
       if (d.tool === 'rect') ctx.rect(x, y, w, h);
       else ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (this.textPreview) {
+      const { anchor, paths } = this.textPreview;
+      ctx.strokeStyle = layerColor(this.doc.currentLayer);
+      ctx.beginPath();
+      for (const l of paths) {
+        if (!l.pts.length) continue;
+        ctx.moveTo(l.pts[0].x, l.pts[0].y);
+        for (const p of l.pts.slice(1)) ctx.lineTo(p.x, p.y);
+        if (l.closed) ctx.closePath();
+      }
+      ctx.stroke();
+      // 기준점 (첫 줄 기준선)
+      ctx.strokeStyle = '#3d8bfd';
+      ctx.beginPath();
+      ctx.moveTo(anchor.x - 6 * px, anchor.y);
+      ctx.lineTo(anchor.x + 6 * px, anchor.y);
+      ctx.moveTo(anchor.x, anchor.y - 6 * px);
+      ctx.lineTo(anchor.x, anchor.y + 6 * px);
       ctx.stroke();
     }
     if (this.tool === 'line' && this.poly.length) {

@@ -114,6 +114,41 @@ input[type='checkbox'] {
   color: var(--muted);
 }
 
+#text-options {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+#text-options[hidden] {
+  display: none;
+}
+#text-options .hint {
+  color: var(--muted);
+}
+#text-font {
+  max-width: 220px;
+}
+
+#text-input {
+  position: absolute;
+  min-width: 160px;
+  background: rgba(36, 38, 42, 0.92);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 3px 5px;
+  font: inherit;
+  resize: none;
+  z-index: 5;
+}
+#text-input[hidden] {
+  display: none;
+}
+
 #main {
   flex: 1;
   display: flex;
