@@ -1,0 +1,21 @@
+{
+  "name": "laser-tool",
+  "version": "0.1.0",
+  "description": "LightBurn / RDWorks 스타일 레이저 커팅·각인 소프트웨어",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "ruida:send": "node tools/ruida-send.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

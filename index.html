@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laser Tool</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <header id="menubar">
+      <div class="brand">⚡ Laser Tool</div>
+      <div class="group">
+        <button data-cmd="new" title="새 프로젝트">새로</button>
+        <button data-cmd="open" title="프로젝트 열기 (Ctrl+O)">열기</button>
+        <button data-cmd="save" title="프로젝트 저장 (Ctrl+S)">저장</button>
+        <button data-cmd="import" title="SVG / DXF / 이미지 가져오기 (Ctrl+I)">가져오기</button>
+      </div>
+      <div class="group">
+        <button data-cmd="export-gcode" title="GRBL G-code 내보내기">G-code</button>
+        <button data-cmd="export-rd" title="Ruida(RDWorks) .rd 내보내기 – 실험적">RD 파일</button>
+      </div>
+      <div class="group">
+        <button data-cmd="undo" title="실행 취소 (Ctrl+Z)">↶</button>
+        <button data-cmd="redo" title="다시 실행 (Ctrl+Y)">↷</button>
+        <button data-cmd="delete" title="삭제 (Del)">🗑</button>
+        <button data-cmd="duplicate" title="복제 (Ctrl+D)">⧉</button>
+      </div>
+      <div class="group">
+        <button data-cmd="align-left" title="왼쪽 정렬">⇤</button>
+        <button data-cmd="align-hcenter" title="가로 가운데 정렬">↔</button>
+        <button data-cmd="align-right" title="오른쪽 정렬">⇥</button>
+        <button data-cmd="align-top" title="위쪽 정렬">⤒</button>
+        <button data-cmd="align-vcenter" title="세로 가운데 정렬">↕</button>
+        <button data-cmd="align-bottom" title="아래쪽 정렬">⤓</button>
+      </div>
+      <div class="group">
+        <button data-cmd="mirror-h" title="좌우 반전">⇋</button>
+        <button data-cmd="mirror-v" title="상하 반전">⇵</button>
+        <button data-cmd="rotate-ccw" title="반시계 90°">⟲</button>
+        <button data-cmd="rotate-cw" title="시계 90°">⟳</button>
+        <button data-cmd="center-bed" title="작업대 중앙으로">⌖</button>
+      </div>
+      <div class="group">
+        <button data-cmd="preview" title="가공 미리보기 (P)">미리보기</button>
+        <button data-cmd="device" title="장비 설정">장비 설정</button>
+      </div>
+    </header>
+
+    <div id="numeric">
+      <label>X <input id="num-x" type="number" step="0.1" /></label>
+      <label>Y <input id="num-y" type="number" step="0.1" /></label>
+      <label>W <input id="num-w" type="number" step="0.1" min="0" /></label>
+      <label>H <input id="num-h" type="number" step="0.1" min="0" /></label>
+      <label title="비율 고정"><input id="num-lock" type="checkbox" checked /> 🔒</label>
+      <label>회전 <input id="num-rot" type="number" step="1" value="0" /> °</label>
+      <span class="hint">mm · 선택 영역 왼쪽 위 기준</span>
+    </div>
+
+    <div id="main">
+      <nav id="toolbar">
+        <button data-tool="select" class="active" title="선택 (S)">⬚</button>
+        <button data-tool="line" title="선 / 폴리라인 (L) – 더블클릭·Enter 로 완료">╱</button>
+        <button data-tool="rect" title="사각형 (R) – Shift: 정사각형">▭</button>
+        <button data-tool="ellipse" title="타원 (E) – Shift: 원">◯</button>
+        <button data-tool="pan" title="화면 이동 (H) – 가운데 버튼 드래그로도 가능">✋</button>
+        <hr />
+        <button data-cmd="zoom-fit" title="작업대 전체 보기 (F)">⤢</button>
+      </nav>
+
+      <div id="canvas-wrap">
+        <canvas id="view"></canvas>
+        <div id="preview-bar" hidden>
+          <strong>미리보기</strong>
+          <input id="preview-slider" type="range" min="0" max="1000" value="1000" />
+          <button id="preview-play">▶</button>
+          <span id="preview-stats"></span>
+          <label><input id="preview-travel" type="checkbox" checked /> 공이동 표시</label>
+          <button id="preview-close">닫기</button>
+        </div>
+        <div id="drop-hint" hidden>파일을 놓아 가져오기</div>
+      </div>
+
+      <aside id="side">
+        <section>
+          <h3>가공 레이어 (Cuts / Layers)</h3>
+          <table id="layer-table">
+            <thead>
+              <tr><th></th><th>레이어</th><th>모드</th><th>속도</th><th>출력%</th><th>가공</th><th>보기</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="layer-editor"></div>
+        </section>
+
+        <section>
+          <h3>레이저</h3>
+          <div class="row">
+            <button id="btn-connect">연결</button>
+            <span id="conn-state" class="state">Disconnected</span>
+            <span id="conn-pos"></span>
+          </div>
+          <div class="row">
+            <button id="btn-start" class="primary">▶ 시작</button>
+            <button id="btn-pause">⏸ 일시정지</button>
+            <button id="btn-stop" class="danger">■ 정지</button>
+          </div>
+          <div class="row">
+            <button id="btn-frame">프레임</button>
+            <button id="btn-home">원점 복귀</button>
+            <button id="btn-setorigin">현재 위치를 원점으로</button>
+            <button id="btn-unlock" title="$X 알람 해제">잠금 해제</button>
+          </div>
+          <div class="row">
+            <label><input id="opt-selected" type="checkbox" /> 선택 도형만 출력</label>
+          </div>
+          <div class="progress"><div id="job-progress"></div></div>
+        </section>
+
+        <section>
+          <h3>이동 (Jog)</h3>
+          <div class="jog">
+            <span></span><button data-jog="0,1">▲</button><span></span>
+            <button data-jog="-1,0">◀</button><button data-jog="home">⌂</button><button data-jog="1,0">▶</button>
+            <span></span><button data-jog="0,-1">▼</button><span></span>
+          </div>
+          <div class="row">
+            <label>거리 <input id="jog-step" type="number" value="10" min="0.1" step="0.1" /> mm</label>
+            <label>속도 <input id="jog-speed" type="number" value="50" min="1" /> mm/s</label>
+          </div>
+        </section>
+
+        <section class="grow">
+          <h3>콘솔</h3>
+          <pre id="console"></pre>
+          <input id="console-input" placeholder="G-code / $ 명령 입력 후 Enter" />
+        </section>
+      </aside>
+    </div>
+
+    <footer>
+      <div id="palette"></div>
+      <div id="status">
+        <span id="status-msg"></span>
+        <span id="status-pos"></span>
+        <span id="status-zoom"></span>
+      </div>
+    </footer>
+
+    <dialog id="device-dialog">
+      <form method="dialog">
+        <h3>장비 설정</h3>
+        <div class="grid">
+          <label>이름 <input name="name" /></label>
+          <label>컨트롤러
+            <select name="controller">
+              <option value="grbl">GRBL (USB 시리얼)</option>
+              <option value="ruida">Ruida / RDWorks (.rd 파일)</option>
+            </select>
+          </label>
+          <label>작업 영역 폭 (mm) <input name="bedWidth" type="number" min="1" /></label>
+          <label>작업 영역 높이 (mm) <input name="bedHeight" type="number" min="1" /></label>
+          <label>원점 위치
+            <select name="origin">
+              <option value="top-left">왼쪽 위</option>
+              <option value="top-right">오른쪽 위 (Ruida 일반)</option>
+              <option value="bottom-left">왼쪽 아래 (GRBL 일반)</option>
+              <option value="bottom-right">오른쪽 아래</option>
+            </select>
+          </label>
+          <label>GRBL 최대 S 값 ($30) <input name="sMax" type="number" min="1" /></label>
+          <label>공이동 속도 (mm/s) <input name="travelSpeed" type="number" min="1" /></label>
+          <label>프레임 레이저 출력 (%) <input name="framePower" type="number" min="0" max="10" step="0.5" /></label>
+          <label>통신 속도 (baud) <input name="baudRate" type="number" /></label>
+          <label>Ruida IP <input name="ruidaHost" /></label>
+          <label class="check"><input name="dynamicPower" type="checkbox" /> M4 가변 출력 모드 (권장)</label>
+        </div>
+        <menu>
+          <button value="cancel">취소</button>
+          <button value="ok" class="primary">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <input id="file-open" type="file" accept=".ltp,.json" hidden />
+    <input id="file-import" type="file" accept=".svg,.dxf,.png,.jpg,.jpeg,.bmp,.gif,.webp" multiple hidden />
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
