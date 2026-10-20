@@ -389,7 +389,6 @@ const commands: Record<string, () => void | Promise<void>> = {
   preview: () => (view.previewJob ? closePreview() : openPreview()),
   device: () => openDeviceDialog(),
   'zoom-fit': () => view.zoomToFit(),
-  ai: () => (ai.state === 'off' ? ai.start() : ai.stop()),
   copy: () => {
     clipboard = doc.selected().map((s) => cloneShape(s));
   },
@@ -713,19 +712,35 @@ ai.onState = (s) => {
   if (s === 'connected') {
     log('[AI] MCP 서버와 연결됨 – Claude 가 그림을 그릴 수 있습니다');
     status('AI 연결됨');
-  } else if (s === 'connecting') status('AI: MCP 서버 대기 중 (Claude 에 laser-tool MCP 를 등록하고 실행하세요)', true);
+  } else if (s === 'connecting') status('AI: MCP 서버 대기 중 (Claude 에서 laser-tool 도구를 쓰면 자동으로 연결됩니다)', true);
+};
+ai.onReplaced = () => {
+  log('[AI] 다른 창(탭)이 AI 연결을 가져갔습니다. 이 창에서 쓰려면 [AI 연결] 을 다시 누르세요.', 'err');
+  status('AI: 다른 창에서 연결 중 – 이 창은 연결을 해제했습니다', true);
+};
+ai.onCall = (method, ok, info) => log(`[AI] ${method}${ok ? '' : ` 실패: ${info}`}`, ok ? 'in' : 'err');
+
+/** 사용자가 직접 켜고 끈 경우만 기억한다 (기본값: 켜짐) */
+function rememberAi(on: boolean): void {
   try {
-    localStorage.setItem('laser-tool.ai', s === 'off' ? '0' : '1');
+    localStorage.setItem('laser-tool.ai', on ? '1' : '0');
   } catch {
     /* 무시 */
   }
+}
+commands.ai = () => {
+  const on = ai.state === 'off';
+  if (on) ai.start();
+  else ai.stop();
+  rememberAi(on);
 };
-ai.onCall = (method, ok, info) => log(`[AI] ${method}${ok ? '' : ` 실패: ${info}`}`, ok ? 'in' : 'err');
+let aiAuto = true;
 try {
-  if (localStorage.getItem('laser-tool.ai') === '1') ai.start();
+  aiAuto = localStorage.getItem('laser-tool.ai') !== '0';
 } catch {
   /* 무시 */
 }
+if (aiAuto) ai.start();
 
 // ---------------- 시작 ----------------
 

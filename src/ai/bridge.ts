@@ -12,6 +12,8 @@ export class AiBridge {
   onState: (s: BridgeState) => void = () => {};
   /** 도구 호출 기록 (콘솔 표시용) */
   onCall: (method: string, ok: boolean, info: string) => void = () => {};
+  /** 다른 탭/창이 AI 연결을 가져가 이 창의 연결이 해제됨 */
+  onReplaced: () => void = () => {};
 
   constructor(
     private ctx: AiContext,
@@ -43,10 +45,17 @@ export class AiBridge {
     const ws = new WebSocket(this.url);
     this.ws = ws;
     // 연결 자체가 아니라 서버의 인사 메시지를 받아야 연결된 것으로 본다 (같은 포트의 다른 서비스와 구분)
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (this.ws !== ws) return;
       this.ws = null;
       if (!this.wanted) return;
+      // 다른 탭/창이 연결을 가져갔다: 다시 붙으면 서로 밀어내기를 반복하므로 여기서 멈춘다
+      if (ev.reason === 'replaced') {
+        this.wanted = false;
+        this.set('off');
+        this.onReplaced();
+        return;
+      }
       // MCP 서버는 Claude 가 실행할 때만 떠 있으므로 계속 재시도한다
       this.set('connecting');
       this.retry = window.setTimeout(() => this.open(), 2000);

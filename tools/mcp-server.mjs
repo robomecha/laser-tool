@@ -7,6 +7,9 @@
 // stdout 은 MCP 통신 전용이므로 로그는 stderr 로만 쓴다.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { spawn } from 'node:child_process';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
 
@@ -65,9 +68,16 @@ function callBrowser(method, params) {
   return send(client, method, params);
 }
 
-function call(method, params = {}) {
+async function call(method, params = {}) {
   if (relay && relay.readyState === 1) return send(relay, method, params);
-  if (bridgeError) return Promise.reject(new Error(bridgeError));
+  if (bridgeError) throw new Error(bridgeError);
+  if (!client || client.readyState !== 1) {
+    // 앱이 꺼져 있으면 띄우고, 열려 있는 탭이 자동으로 다시 붙을 시간을 준다
+    await ensureApp();
+    if (!(await waitBrowser(3000))) {
+      throw new Error(`Laser Tool 앱(${APP_URL})이 브라우저에 열려 있지 않습니다. open_app 도구로 브라우저에 열거나, 사용자에게 ${APP_URL} 을 열어 달라고 하세요.`);
+    }
+  }
   return callBrowser(method, params);
 }
 
@@ -161,6 +171,60 @@ function startRelay() {
 
 startHub();
 
+// ---------------- 앱(Vite 개발 서버) 자동 실행 ----------------
+
+const APP_URL = process.env.LASER_APP_URL || 'http://localhost:5173';
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+async function appUp() {
+  try {
+    const r = await fetch(APP_URL, { signal: AbortSignal.timeout(1500) });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+let starting = null;
+/** 앱 서버가 꺼져 있으면 백그라운드로 띄운다 (`npm run dev` 와 같음). 이 MCP 서버가 끝나도 계속 실행된다 */
+function ensureApp() {
+  starting ??= (async () => {
+    if (await appUp()) return 'running';
+    const port = new URL(APP_URL).port || '5173';
+    const vite = join(PROJECT_ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
+    const child = spawn(process.execPath, [vite, '--port', port, '--strictPort'], {
+      cwd: PROJECT_ROOT,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+    log(`앱 서버 시작: ${APP_URL} (pid ${child.pid})`);
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      if (await appUp()) return 'started';
+    }
+    throw new Error(`앱 서버(${APP_URL})를 시작하지 못했습니다. 프로젝트 폴더에서 npm run dev 를 실행해 보세요.`);
+  })().finally(() => {
+    starting = null;
+  });
+  return starting;
+}
+
+function openInBrowser(url) {
+  const [cmd, args] =
+    process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+}
+
+async function waitBrowser(ms) {
+  for (let t = 0; t < ms; t += 250) {
+    if ((client && client.readyState === 1) || (relay && relay.readyState === 1)) return true;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return false;
+}
+
 const text = (v) => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] });
 const fail = (e) => ({ content: [{ type: 'text', text: `오류: ${e.message}` }], isError: true });
 
@@ -183,7 +247,7 @@ const server = new McpServer(
     instructions: [
       'Laser Tool(레이저 커팅/각인 편집기)을 조작한다. 좌표 단위는 mm, 작업대 왼쪽 위가 (0,0)이고 Y 는 아래로 증가한다.',
       '도형은 색상 레이어(0~29)에 속하고 레이어마다 가공 모드가 있다: line=선 따라 절단, fill=닫힌 도형 내부 스캔 각인, image=비트맵 각인.',
-      '작업 순서: get_canvas_info 로 작업대 크기 확인 → draw_shapes / add_text / import_svg 로 그리기 → set_layer 로 가공 설정 → snapshot 으로 결과 확인 후 수정.',
+      '앱이 열려 있지 않다는 오류가 나면 open_app 을 먼저 호출한다. 작업 순서: get_canvas_info 로 작업대 크기 확인 → draw_shapes / add_text / import_svg 로 그리기 → set_layer 로 가공 설정 → snapshot 으로 결과 확인 후 수정.',
       '복잡한 그림(일러스트, 패턴, 로고)은 SVG 를 작성해 import_svg 로 넣는 것이 편하다. 각인할 면은 닫힌 도형으로 만들고 fill 레이어에 둔다.',
       '레이저 가공 시작은 사용자가 앱에서 직접 한다. 끝나면 사용자에게 미리보기(P)로 확인 후 시작하라고 안내한다.',
     ].join('\n'),
@@ -202,6 +266,29 @@ const shapeSpec = z.discriminatedUnion('type', [
   z.object({ type: z.literal('path'), d: z.string().describe('SVG path 데이터, mm 단위 문서 좌표'), ...common }),
 ]);
 const ids = z.array(z.string()).min(1).describe('도형 id 목록 (list_shapes / draw 결과에서 얻음)');
+
+server.registerTool(
+  'open_app',
+  {
+    description: 'Laser Tool 앱을 준비한다: 앱 서버가 꺼져 있으면 시작하고, 브라우저에 열려 있지 않으면 기본 브라우저로 연다. 다른 도구가 "브라우저에 열려 있지 않습니다" 오류를 내면 호출.',
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      const app = await ensureApp();
+      if (await waitBrowser(500)) return text({ url: APP_URL, app, browser: '이미 연결됨' });
+      openInBrowser(APP_URL);
+      const ok = await waitBrowser(20000);
+      return text({
+        url: APP_URL,
+        app,
+        browser: ok ? '브라우저를 열고 연결됨' : '브라우저를 열었지만 아직 연결되지 않음 – 사용자에게 상단 [AI 연결] 버튼을 눌러 달라고 하세요',
+      });
+    } catch (e) {
+      return fail(e);
+    }
+  },
+);
 
 tool('get_canvas_info', '작업대 크기, 원점, 사용 중 레이어와 설정, 도형 수, 팔레트 색, 사용 가능한 글꼴을 돌려준다.', {});
 
