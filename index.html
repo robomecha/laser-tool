@@ -187,7 +187,7 @@
           <label>컨트롤러
             <select name="controller">
               <option value="grbl">GRBL (USB 시리얼)</option>
-              <option value="ruida">Ruida / RDWorks (.rd 파일)</option>
+              <option value="ruida">Ruida / RDWorks (USB 또는 .rd 파일)</option>
             </select>
           </label>
           <label>작업 영역 폭 (mm) <input name="bedWidth" type="number" min="1" /></label>
@@ -204,7 +204,8 @@
           <label>공이동 속도 (mm/s) <input name="travelSpeed" type="number" min="1" /></label>
           <label>프레임 레이저 출력 (%) <input name="framePower" type="number" min="0" max="10" step="0.5" /></label>
           <label>통신 속도 (baud) <input name="baudRate" type="number" /></label>
-          <label>Ruida IP <input name="ruidaHost" /></label>
+          <label>Ruida IP (UDP 전송 도구) <input name="ruidaHost" /></label>
+          <label>Ruida swizzle magic (보통 136 = 0x88) <input name="ruidaMagic" type="number" min="0" max="255" /></label>
           <label class="check"><input name="dynamicPower" type="checkbox" /> M4 가변 출력 모드 (권장)</label>
         </div>
         <menu>

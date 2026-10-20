@@ -22,6 +22,8 @@ export interface DeviceSettings {
   baudRate: number;
   /** Ruida 컨트롤러 IP (tools/ruida-send.mjs 에서 사용) */
   ruidaHost: string;
+  /** Ruida swizzle magic: 대부분 0x88(136), 634XG 는 0x11(17) */
+  ruidaMagic: number;
 }
 
 export function defaultDevice(): DeviceSettings {
@@ -37,6 +39,7 @@ export function defaultDevice(): DeviceSettings {
     framePower: 0,
     baudRate: 115200,
     ruidaHost: '192.168.1.100',
+    ruidaMagic: 0x88,
   };
 }
 

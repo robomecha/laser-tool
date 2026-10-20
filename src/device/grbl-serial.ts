@@ -4,13 +4,13 @@
 // 넘지 않는 범위에서 미리 보내고, 'ok'/'error' 응답마다 해당 줄 길이만큼 여유를 회수한다.
 
 // Web Serial 최소 타입 선언 (lib.dom 에 없음)
-interface SerialPortLike {
-  open(o: { baudRate: number }): Promise<void>;
+export interface SerialPortLike {
+  open(o: { baudRate: number; flowControl?: 'none' | 'hardware' }): Promise<void>;
   close(): Promise<void>;
   readable: ReadableStream<Uint8Array> | null;
   writable: WritableStream<Uint8Array> | null;
 }
-interface SerialLike {
+export interface SerialLike {
   requestPort(): Promise<SerialPortLike>;
 }
 

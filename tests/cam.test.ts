@@ -130,5 +130,20 @@ describe('ruida encoding', () => {
     expect(asm.filter((l) => l.startsWith('CUT_ABS'))).toHaveLength(4);
     expect(asm).toContain('MOVE_ABS 10.000, 10.000');
     expect(asm[asm.length - 1]).toBe('EOF');
+    // 파일 저장용은 작업 시작 명령이 없다
+    expect(asm).not.toContain('D8 START');
+  });
+  it('direct-send job starts the process and carries the file checksum', () => {
+    const doc = new LaserDocument();
+    doc.add(makeVector([rectPolyline(10, 10, 20, 20)], 0));
+    const plain = jobToRuidaPlain(planJob(doc).job, defaultDevice(), { startProcess: true });
+    const asm = disassembleRuida(plain);
+    expect(asm).toContain('D8 START');
+    expect(asm.some((l) => l.startsWith('?? '))).toBe(false);
+    const sumLine = asm.find((l) => l.startsWith('FILE_SUM'))!;
+    // FILE_SUM = 그 앞까지의 바이트 합 + D7
+    const idx = plain.length - 1 - 7;
+    const expected = Array.from(plain.subarray(0, idx)).reduce((a, b) => a + b, 0) + 0xd7;
+    expect(sumLine).toBe(`FILE_SUM ${expected}`);
   });
 });

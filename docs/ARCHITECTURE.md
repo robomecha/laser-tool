@@ -65,7 +65,7 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 | Console | – | 콘솔 | ✅ |
 | Device Settings | Vendor / User Settings | 장비 설정 대화상자 | ✅ (기본 항목) |
 | GRBL 연결 | – | Web Serial | ✅ |
-| Ruida 연결 | USB / Ethernet | .rd 내보내기 + UDP 도구 | 🧪 실험적 |
+| Ruida 연결 | USB / Ethernet | USB: `device/ruida-usb.ts` (Web Serial) · Ethernet: .rd 내보내기 + UDP 도구 | 🧪 실험적 |
 | Text 도구 | Text | `core/text.ts`, `io/font.ts`, `ui/text-tool.ts` | ✅ (생성 시 경로로 변환, 재편집 불가) |
 | Offset, Boolean (Weld/Union/Subtract) | Offset | `core/clip.ts` (clipper-lib) | ✅ (오프셋, 합치기/빼기/교집합) |
 | Node 편집 | Edit Nodes | – | ⏳ |
@@ -86,6 +86,9 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 ### Ruida .rd (`output/ruida.ts`)
 * 바이트 swizzle (bit0↔bit7, XOR 0x88, +1), 좌표 5바이트 7비트 인코딩(µm), 출력 14비트.
 * 헤더(작업 범위), 레이어별 속도/출력/색상, 본문(`88` 이동, `A8` 가공), `D7` 종료.
+* 파일 구성은 MeerK40t `rdjob.py` 순서를 따른다: `D8 10`, `E6 01`, `F0`, `F1 02 00`, (직접 전송 시 `D8 00`), 범위(`E7 03/07/50/51`), 레이어 설정, 본문, `E7 00 · CA 01 00 · CA 01 30`, 파일 합계 `E5 05`, `D7`.
+* USB: swizzle 된 바이트를 체크섬·ACK 없이 그대로 보낸다. 상태는 `DA 00 04 00`(상태 비트), `04 21`/`04 31`(X/Y µm) 를 폴링하고, 응답은 `DA 01 <주소> <값 5바이트>`.
+* UDP(50200): 패킷 앞에 swizzle 된 바이트 합 체크섬 2바이트, 응답 `CC`(ACK) / `CF`(NAK).
 * `disassembleRuida()` 로 생성 파일을 사람이 읽을 수 있는 형태로 확인 가능 (테스트에서 사용).
 * 실제 RDWorks 가 생성하는 파일보다 단순한 부분집합이므로 컨트롤러 모델·펌웨어에 따라 동작이 다를 수 있다.
 
@@ -93,7 +96,7 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 
 1. **편집 강화**: 텍스트 재편집(텍스트 도형 타입), 원/경로 위 텍스트, 노드 편집, 배열 복사, 그룹, 스냅(그리드·객체), 레이어 순서 변경
 2. **CAM 강화**: 경로 2-opt 최적화, 방향 지정, 리드인/아웃, 탭, 코너 감속, 채우기 "도형별" 모드, 크로스해치
-3. **장비**: 시작 위치 옵션(현재 위치/사용자 원점), 작업 재개, 재료 라이브러리, Ruida 실시간 제어(조그/프레임), Marlin/Smoothie
+3. **장비**: 시작 위치 옵션(현재 위치/사용자 원점), 작업 재개, 재료 라이브러리, Marlin/Smoothie
 4. **데스크톱 패키징**: Electron 또는 Tauri (USB·UDP 네이티브 접근, 파일 연동)
 5. **카메라**: 작업대 오버레이·정렬
 

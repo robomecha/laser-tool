@@ -4,9 +4,9 @@
 // 사용법: node tools/ruida-send.mjs <file.rd> <controller-ip> [--start]
 //
 // 프로토콜 (공개 역공학 자료 기준):
-//  - 패킷 = [체크섬 2바이트, big-endian] + [swizzle 된 데이터 최대 1470바이트]
+//  - 패킷 = [체크섬 2바이트, big-endian] + [swizzle 된 데이터 최대 1000바이트]
 //    체크섬은 swizzle 된 데이터 바이트의 합 & 0xFFFF
-//  - 컨트롤러는 UDP 50200 에서 수신하고 송신측 40200 포트로 ACK(0xC6) / NAK(0x46) 를 보낸다.
+//  - 컨트롤러는 UDP 50200 에서 수신하고 송신측 40200 포트로 ACK(0xCC) / NAK(0xCF) 를 보낸다 (응답도 swizzle 됨).
 //  - .rd 파일 내용은 이미 swizzle 되어 있으므로 그대로 잘라 보낸다.
 import dgram from 'node:dgram';
 import { readFileSync } from 'node:fs';
@@ -28,7 +28,7 @@ const unswizzle = (b) => {
 };
 
 const data = readFileSync(file);
-const CHUNK = 1470;
+const CHUNK = 1000;
 const sock = dgram.createSocket('udp4');
 let offset = 0;
 let retries = 0;
@@ -66,8 +66,8 @@ function sendNext() {
 
 sock.on('message', (msg) => {
   const b = msg[0];
-  const ack = b === 0xc6 || unswizzle(b) === 0xc6;
-  const nak = b === 0x46 || unswizzle(b) === 0x46;
+  const ack = unswizzle(b) === 0xcc;
+  const nak = unswizzle(b) === 0xcf;
   if (ack) {
     retries = 0;
     offset += CHUNK;

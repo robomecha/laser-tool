@@ -8,12 +8,13 @@ import { cloneShape, ImageShape, makeVector, Shape, shapeBBox, VectorShape, worl
 import { estimateJob, formatDuration, Job, jobBBox } from './cam/job';
 import { planJob } from './cam/planner';
 import { GrblConnection } from './device/grbl-serial';
+import { RuidaUsbConnection } from './device/ruida-usb';
 import { importDXF } from './io/dxf-import';
 import { grayForShapes, importImage } from './io/image-import';
 import { loadProjectInto, PROJECT_EXT, serializeProject } from './io/project';
 import { importSVG } from './io/svg-import';
 import { jobToGcode } from './output/gcode';
-import { jobToRuidaFile } from './output/ruida';
+import { jobToRuidaFile, jobToRuidaPlain } from './output/ruida';
 import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
 import { TextTool } from './ui/text-tool';
@@ -26,6 +27,7 @@ const view = new CanvasView($<HTMLCanvasElement>('view'), doc, () => device);
 new LayerPanel(doc, document.querySelector('#layer-table tbody')!, $('layer-editor'));
 const textTool = new TextTool(doc, view);
 const grbl = new GrblConnection();
+const ruida = new RuidaUsbConnection();
 let clipboard: Shape[] = [];
 let projectName = 'untitled';
 
@@ -518,47 +520,57 @@ function openDeviceDialog(): void {
   dlg.showModal();
 }
 
-// ---------------- 레이저 제어 (GRBL) ----------------
+// ---------------- 레이저 제어 (GRBL / Ruida USB) ----------------
 
 const btnConnect = $<HTMLButtonElement>('btn-connect');
 const btnPause = $<HTMLButtonElement>('btn-pause');
 let paused = false;
 
+/** 현재 연결된 컨트롤러 종류 (연결 안 됐으면 null) */
+const active = (): 'grbl' | 'ruida' | null => (grbl.connected ? 'grbl' : ruida.connected ? 'ruida' : null);
+
 function refreshLaserButtons(): void {
-  const c = grbl.connected;
-  btnConnect.textContent = c ? '연결 해제' : '연결';
-  for (const id of ['btn-start', 'btn-pause', 'btn-stop', 'btn-frame', 'btn-home', 'btn-setorigin', 'btn-unlock']) {
-    $<HTMLButtonElement>(id).disabled = !c;
-  }
+  const c = active();
+  btnConnect.textContent = c ? '연결 해제' : device.controller === 'ruida' ? '연결 (Ruida USB)' : '연결';
+  for (const id of ['btn-start', 'btn-pause', 'btn-stop', 'btn-frame', 'btn-home']) $<HTMLButtonElement>(id).disabled = !c;
+  // Ruida 는 원점 설정·알람 해제를 컨트롤러 패널에서 한다
+  for (const id of ['btn-setorigin', 'btn-unlock']) $<HTMLButtonElement>(id).disabled = c !== 'grbl';
   btnPause.textContent = paused ? '⏵ 재개' : '⏸ 일시정지';
 }
 
-grbl.onLine = (line, dir) => log(line, line.startsWith('error') || line.startsWith('ALARM') ? 'err' : dir);
-grbl.onStatus = (s) => {
+function showStatus(state: string, x: number, y: number, connected: boolean): void {
   const el = $('conn-state');
-  el.textContent = s.state;
-  el.className = `state ${s.state}`;
-  $('conn-pos').textContent = grbl.connected ? `X ${s.x.toFixed(2)} Y ${s.y.toFixed(2)}` : '';
-  view.headPos = grbl.connected ? { x: s.x, y: s.y } : null;
+  el.textContent = state;
+  el.className = `state ${state === 'Move' ? 'Jog' : state}`;
+  $('conn-pos').textContent = connected ? `X ${x.toFixed(2)} Y ${y.toFixed(2)}` : '';
+  view.headPos = connected ? { x, y } : null;
   view.requestRender();
   refreshLaserButtons();
-};
+}
+
+grbl.onLine = (line, dir) => log(line, line.startsWith('error') || line.startsWith('ALARM') ? 'err' : dir);
+grbl.onStatus = (s) => showStatus(s.state, s.x, s.y, grbl.connected);
 grbl.onProgress = (p) => {
   $('job-progress').style.width = `${p.total ? (p.acked / p.total) * 100 : 0}%`;
 };
+ruida.onLine = (line, dir) => log(line, dir);
+ruida.onStatus = (s) => showStatus(s.state, s.x, s.y, ruida.connected);
+ruida.onProgress = (p) => {
+  $('job-progress').style.width = `${p.total ? (p.sent / p.total) * 100 : 0}%`;
+};
 
 btnConnect.onclick = async () => {
-  if (device.controller === 'ruida') {
-    status('Ruida 장비는 .rd 파일로 내보낸 뒤 tools/ruida-send.mjs 로 전송합니다 (README 참고)');
-    return;
-  }
   if (!GrblConnection.supported()) {
     status('이 브라우저는 Web Serial 을 지원하지 않습니다. Chrome 또는 Edge 를 사용하세요.');
     return;
   }
   try {
     if (grbl.connected) await grbl.disconnect();
-    else {
+    else if (ruida.connected) await ruida.disconnect();
+    else if (device.controller === 'ruida') {
+      await ruida.connect(device.baudRate, device.ruidaMagic);
+      log(`Ruida USB 연결됨 (magic 0x${device.ruidaMagic.toString(16)})`);
+    } else {
       await grbl.connect(device.baudRate);
       log(`연결됨 (${device.baudRate} baud)`);
     }
@@ -571,7 +583,7 @@ btnConnect.onclick = async () => {
         ? '이 창(앱 내장 브라우저)은 USB 포트 선택을 지원하지 않습니다. Chrome 또는 Edge 에서 http://localhost:5173 을 여세요.'
         : '포트를 선택하지 않았습니다. 목록에 없으면 USB 케이블·드라이버(CH340/FTDI)를 확인하세요.';
     } else if (err.name === 'NetworkError' || err.name === 'InvalidStateError') {
-      hint = '포트를 열 수 없습니다. LightBurn·LaserGRBL 등 다른 프로그램이 포트를 쓰고 있지 않은지 확인하세요.';
+      hint = '포트를 열 수 없습니다. LightBurn·RDWorks·LaserGRBL 등 다른 프로그램이 포트를 쓰고 있지 않은지 확인하세요.';
     }
     status(`연결 실패: ${hint}`, true);
     log(`[연결 실패] ${err.name}: ${err.message}`, 'err');
@@ -589,30 +601,45 @@ const guard = (fn: () => Promise<void>) => async () => {
 };
 
 $('btn-start').onclick = guard(async () => {
-  if (grbl.busy) return;
+  const c = active();
+  if (!c || grbl.busy || ruida.busy) return;
   const res = await buildJob();
   if (!res) return;
   const st = estimateJob(res.job, device.travelSpeed, fromMachine(device, 0, 0));
   if (!confirm(`작업을 시작할까요?\n예상 시간 ${formatDuration(st.seconds)}\n\n레이저 안전 수칙(보안경, 환기, 화재 감시)을 지키세요.`)) return;
-  const gcode = jobToGcode(res.job, device, { comment: projectName });
-  log(`작업 시작: ${gcode.split('\n').length} 줄`);
   const t0 = Date.now();
-  await grbl.stream(gcode);
+  paused = false;
+  if (c === 'grbl') {
+    const gcode = jobToGcode(res.job, device, { comment: projectName });
+    log(`작업 시작: ${gcode.split('\n').length} 줄`);
+    await grbl.stream(gcode);
+  } else {
+    const plain = jobToRuidaPlain(res.job, device, { startProcess: true });
+    log(`Ruida 작업 전송: ${plain.length} bytes`);
+    await ruida.sendJob(plain);
+    await ruida.waitJobDone();
+  }
   log(`작업 종료 (${formatDuration((Date.now() - t0) / 1000)})`);
   status('작업 완료');
 });
 btnPause.onclick = guard(async () => {
   paused = !paused;
-  await (paused ? grbl.pause() : grbl.resume());
+  if (active() === 'ruida') await (paused ? ruida.pause() : ruida.resume());
+  else await (paused ? grbl.pause() : grbl.resume());
   refreshLaserButtons();
 });
 $('btn-stop').onclick = guard(async () => {
   paused = false;
-  await grbl.stop();
-  log('정지 (소프트 리셋)', 'err');
+  if (active() === 'ruida') {
+    await ruida.stop();
+    log('정지', 'err');
+  } else {
+    await grbl.stop();
+    log('정지 (소프트 리셋)', 'err');
+  }
   refreshLaserButtons();
 });
-$('btn-home').onclick = guard(() => grbl.send('$H'));
+$('btn-home').onclick = guard(() => (active() === 'ruida' ? ruida.home() : grbl.send('$H')));
 $('btn-unlock').onclick = guard(() => grbl.send('$X'));
 $('btn-setorigin').onclick = guard(() => grbl.send('G10 L20 P1 X0 Y0'));
 $('btn-frame').onclick = guard(async () => {
@@ -625,6 +652,10 @@ $('btn-frame').onclick = guard(async () => {
     toMachine(device, b.maxX, b.maxY),
     toMachine(device, b.minX, b.maxY),
   ];
+  if (active() === 'ruida') {
+    await ruida.frame(corners);
+    return;
+  }
   const F = Math.round(device.travelSpeed * 60);
   const lines = ['G90 G21'];
   if (device.framePower > 0) {
@@ -640,15 +671,19 @@ $('btn-frame').onclick = guard(async () => {
 
 document.querySelectorAll<HTMLButtonElement>('[data-jog]').forEach((b) => {
   b.onclick = guard(async () => {
-    if (!grbl.connected) return;
+    const c = active();
+    if (!c) return;
     const step = Number($<HTMLInputElement>('jog-step').value) || 1;
     const feed = (Number($<HTMLInputElement>('jog-speed').value) || 50) * 60;
     if (b.dataset.jog === 'home') {
-      await grbl.send(`$J=G90 G21 X0 Y0 F${feed}`);
+      await (c === 'ruida' ? ruida.moveTo(0, 0) : grbl.send(`$J=G90 G21 X0 Y0 F${feed}`));
       return;
     }
-    const [dx, dy] = b.dataset.jog!.split(',').map(Number);
-    await grbl.jog(dx * step, dy * step, feed);
+    // 버튼 방향은 화면 기준(오른쪽 +, 위쪽 +) → 원점 위치에 따라 기계 축 방향으로 변환
+    const [vx, vy] = b.dataset.jog!.split(',').map(Number);
+    const dx = (device.origin.includes('right') ? -vx : vx) * step;
+    const dy = (device.origin.includes('top') ? -vy : vy) * step;
+    await (c === 'ruida' ? ruida.jog(dx, dy) : grbl.jog(dx, dy, feed));
   });
 });
 
@@ -658,7 +693,7 @@ consoleInput.onkeydown = (e) => {
   const cmd = consoleInput.value.trim();
   consoleInput.value = '';
   if (!grbl.connected) {
-    log('연결되지 않았습니다', 'err');
+    log(ruida.connected ? '콘솔 명령은 GRBL 에서만 지원합니다' : '연결되지 않았습니다', 'err');
     return;
   }
   guard(() => grbl.send(cmd))();
@@ -671,7 +706,7 @@ refreshNumeric();
 refreshLaserButtons();
 requestAnimationFrame(() => view.zoomToFit());
 status('준비됨 – SVG/DXF/이미지를 끌어다 놓거나 도구로 그려보세요', true);
-log('Laser Tool v0.1 – GRBL(Web Serial) / Ruida(.rd 내보내기)');
+log('Laser Tool v0.1 – GRBL / Ruida (USB: Chrome·Edge Web Serial)');
 
 // 디버깅용
-(window as unknown as { laser: unknown }).laser = { doc, view, grbl, layerColor };
+(window as unknown as { laser: unknown }).laser = { doc, view, grbl, ruida, layerColor };
