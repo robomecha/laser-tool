@@ -121,8 +121,18 @@
           </div>
           <div class="chat-log">
             <div class="chat-note" hidden>
-              Claude API 키가 아직 없습니다. 프로젝트 폴더에 <code>.env.local</code> 파일을 만들고
-              <code>ANTHROPIC_API_KEY=키</code> 한 줄을 넣은 뒤 <code>npm run dev</code> 를 다시 실행하세요.
+              <strong>이 대화창은 Claude API 키가 있어야 동작합니다.</strong> (API 사용량만큼 별도 요금)
+              <ul>
+                <li>
+                  <b>키 없이 쓰기:</b> Claude Desktop 채팅에서 요청하세요. 예: “laser-tool 로 원형 코스터 만들어 줘”.
+                  이 화면에 바로 그려지며 Claude 구독으로 동작합니다 (상단 <b>🤖 AI 연결</b> 이 켜져 있어야 함).
+                </li>
+                <li>
+                  <b>키로 쓰기:</b> <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
+                  에서 키를 만들고, 프로젝트 폴더의 <code>.env.local</code> 에 <code>ANTHROPIC_API_KEY=키</code> 를 넣은 뒤
+                  <code>npm run dev</code> 를 다시 실행하세요.
+                </li>
+              </ul>
             </div>
             <div class="chat-examples">
               <span>예시:</span>

@@ -58,7 +58,7 @@ export function chatPlugin(): Plugin {
         if (req.method !== 'POST') return json(res, 405, { error: 'POST 만 지원합니다' });
         if (!hasKey()) {
           return json(res, 503, {
-            error: 'Claude API 키가 설정되지 않았습니다. 프로젝트 폴더에 .env.local 파일을 만들고 ANTHROPIC_API_KEY=키 를 넣은 뒤 npm run dev 를 다시 실행하세요.',
+            error: 'Claude API 키가 설정되지 않았습니다. 키 없이 쓰려면 Claude Desktop 채팅에서 "laser-tool 로 ... 만들어 줘" 라고 요청하세요. 키를 쓰려면 프로젝트 폴더의 .env.local 에 ANTHROPIC_API_KEY=키 를 넣고 npm run dev 를 다시 실행하세요.',
           });
         }
         let messages: Anthropic.Beta.BetaMessageParam[];
