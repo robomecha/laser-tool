@@ -7,7 +7,7 @@
 // stdout 은 MCP 통신 전용이므로 로그는 stderr 로만 쓴다.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
 
 const PORT = Number(process.env.LASER_MCP_PORT || 47801);
@@ -16,62 +16,36 @@ const TIMEOUT_MS = 30000;
 const log = (...a) => console.error('[laser-mcp]', ...a);
 
 // ---------------- 브라우저 브리지 ----------------
+//
+// 첫 번째로 뜬 서버가 포트를 잡고(허브) 브라우저와 연결한다. Claude Desktop 과 Claude Code 처럼
+// 여러 클라이언트가 각자 이 서버를 띄우면, 나중 서버는 포트가 사용 중이므로 허브에 접속해
+// 요청을 넘기는 중계(relay) 모드로 동작한다. 허브가 종료되면 중계 서버가 허브 역할을 이어받는다.
 
-let client = null;
+let client = null; // 허브: 브라우저 연결
+let relay = null; // 중계: 허브로 가는 연결
 let bridgeError = null;
 let nextId = 1;
 const pending = new Map();
+const RELAY_HEADER = 'x-laser-relay';
 
-const wss = new WebSocketServer({ host: '127.0.0.1', port: PORT });
-wss.on('listening', () => log(`브라우저 연결 대기: ws://127.0.0.1:${PORT}`));
-wss.on('error', (e) => {
-  bridgeError = e.code === 'EADDRINUSE' ? `포트 ${PORT} 를 다른 프로그램(또는 다른 MCP 서버 인스턴스)이 쓰고 있습니다. LASER_MCP_PORT 로 바꾸세요.` : e.message;
-  log(bridgeError);
-});
-wss.on('connection', (ws, req) => {
-  const origin = req.headers.origin || '';
-  if (!ALLOWED_ORIGIN.test(origin)) {
-    log(`거부된 연결 (origin: ${origin || '없음'})`);
-    ws.close(1008, 'origin not allowed');
-    return;
-  }
-  if (client) client.close(1000, 'replaced');
-  client = ws;
-  // 브라우저가 다른 서비스가 아닌 이 서버에 붙었음을 확인할 수 있도록 인사 메시지를 먼저 보낸다
-  ws.send(JSON.stringify({ hello: 'laser-tool-mcp', version: 1 }));
-  log(`브라우저 연결됨 (${origin})`);
-  ws.on('message', (raw) => {
-    let msg;
-    try {
-      msg = JSON.parse(raw.toString());
-    } catch {
-      return;
-    }
-    const p = pending.get(msg.id);
-    if (!p) return;
-    pending.delete(msg.id);
+function settle(msg) {
+  const p = pending.get(msg.id);
+  if (!p) return;
+  pending.delete(msg.id);
+  clearTimeout(p.timer);
+  if (msg.error) p.reject(new Error(msg.error));
+  else p.resolve(msg.result);
+}
+
+function rejectAll(reason) {
+  for (const [id, p] of pending) {
     clearTimeout(p.timer);
-    if (msg.error) p.reject(new Error(msg.error));
-    else p.resolve(msg.result);
-  });
-  ws.on('close', () => {
-    if (client === ws) client = null;
-    for (const [id, p] of pending) {
-      clearTimeout(p.timer);
-      p.reject(new Error('브라우저 연결이 끊어졌습니다'));
-      pending.delete(id);
-    }
-    log('브라우저 연결 끊김');
-  });
-});
-
-function call(method, params = {}) {
-  if (bridgeError) return Promise.reject(new Error(bridgeError));
-  if (!client || client.readyState !== 1) {
-    return Promise.reject(
-      new Error('Laser Tool 브라우저가 연결되지 않았습니다. 브라우저에서 http://localhost:5173 을 열고 상단의 [AI 연결] 버튼을 누르세요.'),
-    );
+    p.reject(new Error(reason));
+    pending.delete(id);
   }
+}
+
+function send(ws, method, params) {
   const id = nextId++;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -79,9 +53,113 @@ function call(method, params = {}) {
       reject(new Error('브라우저 응답 시간 초과'));
     }, TIMEOUT_MS);
     pending.set(id, { resolve, reject, timer });
-    client.send(JSON.stringify({ id, method, params }));
+    ws.send(JSON.stringify({ id, method, params }));
   });
 }
+
+const NOT_CONNECTED =
+  'Laser Tool 브라우저가 연결되지 않았습니다. 브라우저에서 http://localhost:5173 을 열고 상단의 [AI 연결] 버튼을 누르세요.';
+
+function callBrowser(method, params) {
+  if (!client || client.readyState !== 1) return Promise.reject(new Error(NOT_CONNECTED));
+  return send(client, method, params);
+}
+
+function call(method, params = {}) {
+  if (relay && relay.readyState === 1) return send(relay, method, params);
+  if (bridgeError) return Promise.reject(new Error(bridgeError));
+  return callBrowser(method, params);
+}
+
+function serveRelay(ws) {
+  log('다른 laser-tool MCP 서버가 중계로 연결됨');
+  ws.on('message', async (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+    try {
+      ws.send(JSON.stringify({ id: msg.id, result: await callBrowser(msg.method, msg.params ?? {}) }));
+    } catch (e) {
+      ws.send(JSON.stringify({ id: msg.id, error: e.message }));
+    }
+  });
+}
+
+function startHub() {
+  const wss = new WebSocketServer({ host: '127.0.0.1', port: PORT });
+  wss.on('listening', () => {
+    bridgeError = null;
+    log(`브라우저 연결 대기: ws://127.0.0.1:${PORT}`);
+  });
+  wss.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      startRelay();
+    } else {
+      bridgeError = e.message;
+      log(bridgeError);
+    }
+  });
+  wss.on('connection', (ws, req) => {
+    const origin = req.headers.origin || '';
+    if (!ALLOWED_ORIGIN.test(origin)) {
+      log(`거부된 연결 (origin: ${origin || '없음'})`);
+      ws.close(1008, 'origin not allowed');
+      return;
+    }
+    if (req.headers[RELAY_HEADER] === '1') {
+      serveRelay(ws);
+      return;
+    }
+    if (client) client.close(1000, 'replaced');
+    client = ws;
+    // 브라우저가 다른 서비스가 아닌 이 서버에 붙었음을 확인할 수 있도록 인사 메시지를 먼저 보낸다
+    ws.send(JSON.stringify({ hello: 'laser-tool-mcp', version: 1 }));
+    log(`브라우저 연결됨 (${origin})`);
+    ws.on('message', (raw) => {
+      try {
+        settle(JSON.parse(raw.toString()));
+      } catch {
+        /* 무시 */
+      }
+    });
+    ws.on('close', () => {
+      if (client === ws) client = null;
+      rejectAll('브라우저 연결이 끊어졌습니다');
+      log('브라우저 연결 끊김');
+    });
+  });
+}
+
+function startRelay() {
+  const ws = new WebSocket(`ws://127.0.0.1:${PORT}`, { headers: { origin: 'http://localhost', [RELAY_HEADER]: '1' } });
+  let opened = false;
+  ws.on('open', () => {
+    opened = true;
+    relay = ws;
+    bridgeError = null;
+    log(`이미 실행 중인 laser-tool MCP 서버(포트 ${PORT})를 통해 중계합니다`);
+  });
+  ws.on('message', (raw) => {
+    try {
+      settle(JSON.parse(raw.toString()));
+    } catch {
+      /* 무시 */
+    }
+  });
+  ws.on('error', () => {});
+  ws.on('close', () => {
+    if (relay === ws) relay = null;
+    rejectAll('중계 연결이 끊어졌습니다. 다시 시도하세요.');
+    if (!opened) bridgeError = `포트 ${PORT} 를 다른 프로그램이 쓰고 있습니다. LASER_MCP_PORT 로 바꾸세요.`;
+    // 허브가 사라졌으면 이 서버가 허브가 된다 (아니면 다시 중계)
+    setTimeout(startHub, 1000);
+  });
+}
+
+startHub();
 
 const text = (v) => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] });
 const fail = (e) => ({ content: [{ type: 'text', text: `오류: ${e.message}` }], isError: true });

@@ -93,6 +93,7 @@ Claude ──MCP(stdio)──▶ tools/mcp-server.mjs ──WebSocket(127.0.0.1:
 | `undo` | 실행 취소 |
 
 > 안전: 레이저 시작·프레임·조그는 MCP 로 제공하지 않습니다. AI 가 그린 뒤 사람이 미리보기(P)로 확인하고 직접 시작하세요.
+> Claude Desktop 과 Claude Code 를 함께 써서 서버가 여러 개 떠도 괜찮습니다: 처음 뜬 서버가 브라우저와 연결하고, 나머지는 그 서버를 통해 중계합니다.
 > WebSocket 은 127.0.0.1 에서만 열리고 localhost 페이지의 연결만 받습니다. 포트는 `LASER_MCP_PORT` 로 바꿀 수 있습니다 (앱 쪽 주소도 함께 변경 필요).
 
 동작 확인: 앱에서 [AI 연결] 을 누른 뒤 `npm run mcp:test` (서버를 띄워 모든 도구를 호출하고 `mcp-snapshot.png` 저장).
