@@ -103,8 +103,18 @@ export class TextTool {
     if (cur) this.fontSel.value = cur;
   }
 
-  private async currentFont(): Promise<Font> {
-    const entry = this.fonts[Number(this.fontSel.value) || 0];
+  private currentFont(): Promise<Font> {
+    return this.fontAt(Number(this.fontSel.value) || 0);
+  }
+
+  fontNames(): string[] {
+    return this.fonts.map((f) => f.name);
+  }
+
+  /** 글꼴 목록의 index 번째 글꼴 (내장 글꼴은 처음 쓸 때 내려받음) */
+  async fontAt(index: number): Promise<Font> {
+    const entry = this.fonts[index];
+    if (!entry) throw new Error(`글꼴 ${index} 이(가) 없습니다 (0~${this.fonts.length - 1})`);
     if (!entry.font) {
       const res = await fetch(entry.url!);
       if (!res.ok) throw new Error(`글꼴 내려받기 실패 (${res.status})`);

@@ -17,6 +17,7 @@ import { jobToGcode } from './output/gcode';
 import { jobToRuidaFile, jobToRuidaPlain } from './output/ruida';
 import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
+import { AiBridge } from './ai/bridge';
 import { TextTool } from './ui/text-tool';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -26,6 +27,7 @@ const doc = new LaserDocument();
 const view = new CanvasView($<HTMLCanvasElement>('view'), doc, () => device);
 new LayerPanel(doc, document.querySelector('#layer-table tbody')!, $('layer-editor'));
 const textTool = new TextTool(doc, view);
+const ai = new AiBridge({ doc, device: () => device, textTool });
 const grbl = new GrblConnection();
 const ruida = new RuidaUsbConnection();
 let clipboard: Shape[] = [];
@@ -387,6 +389,7 @@ const commands: Record<string, () => void | Promise<void>> = {
   preview: () => (view.previewJob ? closePreview() : openPreview()),
   device: () => openDeviceDialog(),
   'zoom-fit': () => view.zoomToFit(),
+  ai: () => (ai.state === 'off' ? ai.start() : ai.stop()),
   copy: () => {
     clipboard = doc.selected().map((s) => cloneShape(s));
   },
@@ -699,6 +702,30 @@ consoleInput.onkeydown = (e) => {
   }
   guard(() => grbl.send(cmd))();
 };
+
+// ---------------- AI (MCP) 연결 ----------------
+
+const AI_LABEL = { off: '🤖 AI 연결', connecting: '🤖 AI 대기 중…', connected: '🤖 AI 연결됨' } as const;
+ai.onState = (s) => {
+  const b = $<HTMLButtonElement>('btn-ai');
+  b.textContent = AI_LABEL[s];
+  b.classList.toggle('active', s === 'connected');
+  if (s === 'connected') {
+    log('[AI] MCP 서버와 연결됨 – Claude 가 그림을 그릴 수 있습니다');
+    status('AI 연결됨');
+  } else if (s === 'connecting') status('AI: MCP 서버 대기 중 (Claude 에 laser-tool MCP 를 등록하고 실행하세요)', true);
+  try {
+    localStorage.setItem('laser-tool.ai', s === 'off' ? '0' : '1');
+  } catch {
+    /* 무시 */
+  }
+};
+ai.onCall = (method, ok, info) => log(`[AI] ${method}${ok ? '' : ` 실패: ${info}`}`, ok ? 'in' : 'err');
+try {
+  if (localStorage.getItem('laser-tool.ai') === '1') ai.start();
+} catch {
+  /* 무시 */
+}
 
 // ---------------- 시작 ----------------
 

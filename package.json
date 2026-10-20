@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "ruida:send": "node tools/ruida-send.mjs"
+    "ruida:send": "node tools/ruida-send.mjs",
+    "mcp": "node tools/mcp-server.mjs",
+    "mcp:test": "node tools/mcp-smoke-test.mjs"
   },
   "license": "MIT",
   "devDependencies": {
@@ -22,7 +24,10 @@
   },
   "dependencies": {
     "@expo-google-fonts/nanum-gothic": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "clipper-lib": "^6.4.2",
-    "opentype.js": "^2.0.0"
+    "opentype.js": "^2.0.0",
+    "ws": "^8.22.0",
+    "zod": "^4.6.7"
   }
 }

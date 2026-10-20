@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "laser-tool": {
+      "command": "node",
+      "args": ["tools/mcp-server.mjs"]
+    }
+  }
+}

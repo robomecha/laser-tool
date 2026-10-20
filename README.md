@@ -61,6 +61,41 @@ npm run ruida:send -- project.rd 192.168.1.100
 > ⚠️ Ruida 프로토콜은 비공개라 공개 역공학 자료를 바탕으로 구현했습니다. 실제 장비에서는 **반드시 저출력으로 먼저 시험**하세요.
 > GRBL 출력 역시 실제 기계에서 처음 사용할 때는 출력과 작업 영역을 확인하세요.
 
+## AI 로 그리기 (MCP)
+
+Claude 같은 AI 가 MCP 도구로 작업대에 직접 도형·텍스트·SVG 를 그리고 레이어를 설정할 수 있습니다.
+
+```
+Claude ──MCP(stdio)──▶ tools/mcp-server.mjs ──WebSocket(127.0.0.1:5174)──▶ 브라우저 Laser Tool
+```
+
+1. `npm run dev` 로 앱을 열고 상단 **[🤖 AI 연결]** 을 누릅니다 (MCP 서버가 뜰 때까지 "대기 중"으로 자동 재시도).
+2. MCP 클라이언트에 서버를 등록합니다.
+   * **Claude Code**: 이 폴더에서 실행하면 `.mcp.json` 의 `laser-tool` 서버를 자동으로 제안합니다 (처음 한 번 승인).
+   * **Claude Desktop**: `claude_desktop_config.json` 에 추가 (경로는 실제 위치로):
+     ```json
+     { "mcpServers": { "laser-tool": { "command": "node", "args": ["C:/.../laser_tool/tools/mcp-server.mjs"] } } }
+     ```
+3. Claude 에게 요청합니다. 예: *"지름 60mm 원형 코스터를 만들어 줘. 가운데에 '커피' 를 새기고 바깥 원은 잘라."*
+
+| 도구 | 설명 |
+| --- | --- |
+| `get_canvas_info` | 작업대 크기, 원점, 레이어 설정, 팔레트, 글꼴 |
+| `draw_shapes` | 선, 폴리라인/다각형, (둥근) 사각형, 원, 타원, SVG path |
+| `add_text` | 텍스트 → 경로 (나눔고딕 기본, 한글 지원) |
+| `import_svg` | SVG 문서를 지정 위치·크기로 가져오기 |
+| `list_shapes` / `transform_shapes` / `delete_shapes` / `set_shape_layer` | 도형 확인·이동·크기·회전·반전·삭제·레이어 변경 |
+| `set_layer` | 모드(line/fill/image), 속도, 출력, 간격, 각도, 디더링 |
+| `offset_shapes` / `boolean_shapes` | 오프셋, 합치기/빼기/교집합 |
+| `preview_job` | 예상 시간·거리·경고 (레이저는 움직이지 않음) |
+| `snapshot` | 작업대 PNG 이미지 (AI 가 결과를 보고 수정) |
+| `undo` | 실행 취소 |
+
+> 안전: 레이저 시작·프레임·조그는 MCP 로 제공하지 않습니다. AI 가 그린 뒤 사람이 미리보기(P)로 확인하고 직접 시작하세요.
+> WebSocket 은 127.0.0.1 에서만 열리고 localhost 페이지의 연결만 받습니다. 포트는 `LASER_MCP_PORT` 로 바꿀 수 있습니다 (앱 쪽 주소도 함께 변경 필요).
+
+동작 확인: 앱에서 [AI 연결] 을 누른 뒤 `npm run mcp:test` (서버를 띄워 모든 도구를 호출하고 `mcp-snapshot.png` 저장).
+
 ## 구조
 
 자세한 설계와 LightBurn / RDWorks 기능 대응표, 로드맵은 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 를 참고하세요.
@@ -73,6 +108,7 @@ src/
   output/  G-code(GRBL), Ruida .rd
   device/  GRBL / Ruida USB (Web Serial) 연결
   ui/      캔버스 편집기, 레이어 패널, 스타일
-tools/     ruida-send.mjs (UDP 전송)
+tools/     ruida-send.mjs (UDP 전송), mcp-server.mjs (AI 용 MCP 서버), mcp-smoke-test.mjs
+  ai/      (src/ai) MCP 요청 처리기, 브라우저 WebSocket 연결
 tests/     vitest 단위 테스트
 ```

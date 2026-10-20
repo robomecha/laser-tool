@@ -74,6 +74,7 @@ DOM 에 의존하지 않도록 분리해 추후 Electron/Tauri 데스크톱 앱�
 | Material Library | Layer 파라미터 저장 | – | ⏳ |
 | Camera 정렬 | – | – | ⏳ |
 | Rotary | Rotary | – | ⏳ |
+| – | – | AI 그리기: MCP 서버 + 브라우저 브리지 (`tools/mcp-server.mjs`, `src/ai/`) | ✅ |
 | 시작 위치: Absolute / Current / User origin | 원점 | 절대 좌표만 | ⏳ |
 
 ## 4. 출력 형식
