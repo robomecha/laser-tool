@@ -57,8 +57,10 @@
       <div class="group">
         <button data-cmd="preview" title="가공 미리보기 (P)">미리보기</button>
         <button data-cmd="device" title="장비 설정">장비 설정</button>
+        <button data-cmd="chat" id="btn-chat" title="앱 안에서 AI 에게 말로 그림을 요청 (C)">💬 AI 대화</button>
         <button data-cmd="ai" id="btn-ai" title="MCP 로 Claude 등 AI 가 그림을 그리게 연결 (npm run mcp 서버 필요)">🤖 AI 연결</button>
       </div>
+      <div class="dev-contact" title="개발자 연락처">개발자 · <a href="mailto:mk1017sh@naver.com">mk1017sh@naver.com</a></div>
     </header>
 
     <div id="numeric">
@@ -109,6 +111,30 @@
           <span id="preview-stats"></span>
           <label><input id="preview-travel" type="checkbox" checked /> 공이동 표시</label>
           <button id="preview-close">닫기</button>
+        </div>
+        <div id="chat-panel" hidden>
+          <div class="chat-head">
+            <strong>💬 AI 대화</strong>
+            <span class="chat-model">Claude</span>
+            <button class="chat-clear" title="대화 지우기">새 대화</button>
+            <button class="chat-close" title="닫기">✕</button>
+          </div>
+          <div class="chat-log">
+            <div class="chat-note" hidden>
+              Claude API 키가 아직 없습니다. 프로젝트 폴더에 <code>.env.local</code> 파일을 만들고
+              <code>ANTHROPIC_API_KEY=키</code> 한 줄을 넣은 뒤 <code>npm run dev</code> 를 다시 실행하세요.
+            </div>
+            <div class="chat-examples">
+              <span>예시:</span>
+              <button data-example="지름 80mm 원형 코스터를 만들어 줘. 가운데에 '커피'를 채우기로 새기고 바깥 원은 잘라.">원형 코스터</button>
+              <button data-example="100x60mm 이름표를 둥근 모서리로 만들고 'HONG GIL DONG' 을 가운데 새겨 줘. 위쪽에 끈 구멍도 뚫어 줘.">이름표</button>
+              <button data-example="지금 그려진 도형들을 확인하고 작업대 가운데로 모아 줘.">가운데 정렬</button>
+            </div>
+          </div>
+          <div class="chat-input">
+            <textarea rows="2" placeholder="무엇을 만들까요? (Enter 보내기, Shift+Enter 줄바꿈)"></textarea>
+            <button class="chat-send primary">보내기</button>
+          </div>
         </div>
         <div id="drop-hint" hidden>파일을 놓아 가져오기</div>
         <textarea id="text-input" hidden rows="1" placeholder="텍스트 입력"></textarea>

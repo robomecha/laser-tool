@@ -18,6 +18,7 @@ import { jobToRuidaFile, jobToRuidaPlain } from './output/ruida';
 import { CanvasView, Tool } from './ui/canvas-view';
 import { LayerPanel } from './ui/layer-panel';
 import { AiBridge } from './ai/bridge';
+import { ChatPanel } from './ai/chat';
 import { TextTool } from './ui/text-tool';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -28,6 +29,7 @@ const view = new CanvasView($<HTMLCanvasElement>('view'), doc, () => device);
 new LayerPanel(doc, document.querySelector('#layer-table tbody')!, $('layer-editor'));
 const textTool = new TextTool(doc, view);
 const ai = new AiBridge({ doc, device: () => device, textTool });
+const chat = new ChatPanel({ doc, device: () => device, textTool }, $('chat-panel'));
 const grbl = new GrblConnection();
 const ruida = new RuidaUsbConnection();
 let clipboard: Shape[] = [];
@@ -490,6 +492,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'p') return run('preview');
   if (k === 'o') return run('offset');
   if (k === 'f') return run('zoom-fit');
+  if (k === 'c') return run('chat');
 });
 
 // ---------------- 장비 설정 ----------------
@@ -728,6 +731,7 @@ function rememberAi(on: boolean): void {
     /* 무시 */
   }
 }
+commands.chat = () => chat.toggle();
 commands.ai = () => {
   const on = ai.state === 'off';
   if (on) ai.start();
