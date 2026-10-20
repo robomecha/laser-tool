@@ -86,7 +86,7 @@ LightBurn 처럼 **도형의 색 = 레이어**입니다. 오른쪽 레이어 패
 | 가져오기 | SVG, DXF, PNG·JPG 등 이미지 |
 | 가공 | 라인(절단) / 채우기 / 이미지(디더링) 레이어, 미리보기·예상 시간 |
 | 장비 | **Ruida (RDWorks 컨트롤러) USB 직접 연결**, .rd 파일 내보내기, **GRBL** USB 연결, G-code 내보내기 |
-| 기타 | 한국어 / English 화면, 도움말(F1), Windows 실행 파일(exe) |
+| 기타 | 한국어 / English 화면, 도움말(F1), 설치 없이 실행되는 Windows exe |
 
 ### RUIDA 제어기 연결
 
@@ -99,22 +99,21 @@ RDC644x 계열(RDC6442G/S, 6445 등)을 기준으로 만들었고, 다른 모델
 
 ## 다운로드 · 실행 방법
 
-소스 코드는 GitHub 에 **무료로 공개**해 두었습니다.
+설치할 것이 없습니다. **실행 파일(exe) 하나만 받아서 더블클릭**하면 됩니다. (Windows 10 / 11)
 
-👉 **https://github.com/robomecha/laser-tool**
+1. 아래 주소에서 **`LaserTool.exe`** 를 내려받습니다.
+   👉 **https://github.com/robomecha/laser-tool/releases/latest**
+2. 내려받은 **LaserTool.exe 를 더블클릭**합니다.
+3. 처음 실행할 때 Windows 가 **"Windows의 PC 보호"** 창을 띄우면 **[추가 정보] → [실행]** 을 누르세요.
+   (개인이 만든 프로그램이라 코드 서명이 없어서 나오는 안내입니다.)
+4. Laser Tool 창이 열립니다. 창을 닫으면 프로그램도 종료됩니다.
 
-컴퓨터에 [Node.js](https://nodejs.org) 가 설치돼 있다면 아래처럼 실행할 수 있습니다.
+- 레이저와 USB 로 연결하려면 PC 에 **Chrome 또는 Edge** 가 있어야 합니다. Windows 11 에는 Edge 가 기본으로 들어 있어서 따로 설치할 필요가 없습니다.
+- LightBurn·RDWorks 가 켜져 있으면 USB 포트를 차지하니 **먼저 닫고** 연결하세요.
+- 앱 안 AI 대화창은 선택 기능입니다. 쓰려면 exe 옆에 `laser-tool.env` 파일을 만들고 Claude API 키를 넣으면 됩니다. (없어도 다른 기능은 모두 동작합니다.)
 
-```
-git clone https://github.com/robomecha/laser-tool.git
-cd laser-tool
-npm install
-npm run dev
-```
-
-그다음 **Chrome 또는 Edge** 에서 `http://localhost:5173` 을 열면 됩니다. (USB 레이저 연결은 Chrome·Edge 에서만 됩니다.)
-
-`npm run build:exe` 로 **설치 없이 더블클릭으로 실행되는 exe 파일**도 만들 수 있습니다. 바로 내려받을 수 있는 실행 파일은 다음 업데이트 때 GitHub **Releases** 에 올릴 예정입니다.
+소스 코드도 GitHub 에 **무료로 공개**해 두었습니다. 직접 고쳐 보고 싶은 분은 여기서 받으시면 됩니다.
+🔗 https://github.com/robomecha/laser-tool
 
 ---
 
@@ -126,6 +125,7 @@ npm run dev
 비슷한 고민을 하시는 분들께 도움이 되면 좋겠습니다. 써 보시고 문제나 필요한 기능이 있으면 편하게 알려 주세요.
 
 📧 문의: mk1017sh@naver.com
+⬇ 다운로드: https://github.com/robomecha/laser-tool/releases/latest
 🔗 GitHub: https://github.com/robomecha/laser-tool
 
 ---
