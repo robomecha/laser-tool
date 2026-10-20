@@ -74,7 +74,7 @@ writeFileSync(
   '# 앱 안 AI 대화창을 쓰려면 이 파일 이름을 laser-tool.env 로 바꾸고 키를 넣으세요 (선택).\n# 키 없이도 프로그램은 모두 동작합니다.\nANTHROPIC_API_KEY=\n',
 );
 writeFileSync(
-  join(release, '사용법.txt'),
+  join(release, 'README.txt'),
   [
     'Laser Tool – 레이저 커팅·각인 소프트웨어',
     '',

@@ -32,7 +32,7 @@ npm run build:exe
 | --- | --- |
 | `LaserTool.exe` | 더블클릭하면 Chrome(없으면 Edge) 앱 창으로 열립니다. 창을 모두 닫으면 종료됩니다. |
 | `laser-tool.env.example` | AI 대화창용 API 키 (선택) – `laser-tool.env` 로 이름을 바꾸고 키 입력 |
-| `사용법.txt` | 간단한 안내 |
+| `README.txt` | 간단한 사용법 (한국어) |
 
 * Node 단일 실행 파일(SEA) 에 앱 파일과 서버(`server/standalone.ts`)를 넣은 구조라 Node 설치가 필요 없습니다.
 * 앱 창은 전용 프로필(`%LOCALAPPDATA%\LaserTool\browser`)을 써서 USB·글꼴 권한과 설정이 일반 브라우저와 섞이지 않습니다. 로그: `%LOCALAPPDATA%\LaserTool\log.txt`.
