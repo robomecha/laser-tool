@@ -101,8 +101,9 @@ RDC644x 계열(RDC6442G/S, 6445 등)을 기준으로 만들었고, 다른 모델
 
 설치할 것이 없습니다. **실행 파일(exe) 하나만 받아서 더블클릭**하면 됩니다. (Windows 10 / 11)
 
-1. 아래 주소에서 **`LaserTool.exe`** 를 내려받습니다.
-   👉 **https://github.com/robomecha/laser-tool/releases/latest**
+1. 아래 링크를 누르면 **`LaserTool.exe`** 가 바로 내려받아집니다.
+   👉 **https://github.com/robomecha/laser-tool/releases/latest/download/LaserTool.exe**
+   (변경 내역과 다른 파일은 릴리스 페이지에서: https://github.com/robomecha/laser-tool/releases/latest)
 2. 내려받은 **LaserTool.exe 를 더블클릭**합니다.
 3. 처음 실행할 때 Windows 가 **"Windows의 PC 보호"** 창을 띄우면 **[추가 정보] → [실행]** 을 누르세요.
    (개인이 만든 프로그램이라 코드 서명이 없어서 나오는 안내입니다.)
@@ -125,7 +126,7 @@ RDC644x 계열(RDC6442G/S, 6445 등)을 기준으로 만들었고, 다른 모델
 비슷한 고민을 하시는 분들께 도움이 되면 좋겠습니다. 써 보시고 문제나 필요한 기능이 있으면 편하게 알려 주세요.
 
 📧 문의: mk1017sh@naver.com
-⬇ 다운로드: https://github.com/robomecha/laser-tool/releases/latest
+⬇ 다운로드: https://github.com/robomecha/laser-tool/releases/latest/download/LaserTool.exe
 🔗 GitHub: https://github.com/robomecha/laser-tool
 
 ---

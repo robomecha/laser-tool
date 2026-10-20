@@ -22,6 +22,10 @@ npm run build      # 타입 검사 + 배포용 빌드 (dist/)
 
 ## 실행 파일 (Windows exe)
 
+**바로 내려받기:** [LaserTool.exe](https://github.com/robomecha/laser-tool/releases/latest/download/LaserTool.exe) (Windows 10/11, 설치 없이 더블클릭) · [릴리스 목록](https://github.com/robomecha/laser-tool/releases)
+
+직접 만들려면:
+
 ```bash
 npm run build:exe
 ```
