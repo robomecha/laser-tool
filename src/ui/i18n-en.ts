@@ -418,4 +418,8 @@ export const EN: Record<string, string> = {
   // ---- 실시간 치수 ----
   '변': 'side',
   '전체': 'total',
+
+  // ---- 실행 파일 ----
+  'Claude API 키가 설정되지 않았습니다. 키 없이 쓰려면 Claude Desktop 채팅에서 "laser-tool 로 ... 만들어 줘" 라고 요청하세요. 키를 쓰려면 LaserTool.exe 옆에 laser-tool.env 파일을 만들고 ANTHROPIC_API_KEY=키 를 넣은 뒤 프로그램을 다시 실행하세요.':
+    'No Claude API key is set. To use it without a key, ask in Claude Desktop: "use laser-tool to make …". To use a key, create laser-tool.env next to LaserTool.exe with ANTHROPIC_API_KEY=your-key and restart the program.',
 };

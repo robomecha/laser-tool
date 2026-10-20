@@ -872,5 +872,12 @@ log('Laser Tool v0.1 – GRBL / Ruida (USB: Chrome·Edge Web Serial)');
 
 startI18n();
 
+// LaserTool.exe 로 실행 중이면 창이 열려 있다고 알린다 (모든 창을 닫으면 exe 가 종료)
+if (/^4781[0-3]$/.test(location.port)) {
+  const ping = () => void fetch('/__ping', { cache: 'no-store' }).catch(() => {});
+  ping();
+  setInterval(ping, 5000);
+}
+
 // 디버깅용
 (window as unknown as { laser: unknown }).laser = { doc, view, grbl, ruida, layerColor };

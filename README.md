@@ -14,6 +14,24 @@ npm test           # 단위 테스트
 npm run build      # 타입 검사 + 배포용 빌드 (dist/)
 ```
 
+## 실행 파일 (Windows exe)
+
+```bash
+npm run build:exe
+```
+
+`release/` 폴더에 다음이 만들어집니다. 이 폴더를 통째로 복사해 다른 PC 에서도 설치 없이 실행할 수 있습니다.
+
+| 파일 | 설명 |
+| --- | --- |
+| `LaserTool.exe` | 더블클릭하면 Chrome(없으면 Edge) 앱 창으로 열립니다. 창을 모두 닫으면 종료됩니다. |
+| `laser-tool.env.example` | AI 대화창용 API 키 (선택) – `laser-tool.env` 로 이름을 바꾸고 키 입력 |
+| `사용법.txt` | 간단한 안내 |
+
+* Node 단일 실행 파일(SEA) 에 앱 파일과 서버(`server/standalone.ts`)를 넣은 구조라 Node 설치가 필요 없습니다.
+* 앱 창은 전용 프로필(`%LOCALAPPDATA%\LaserToolrowser`)을 써서 USB·글꼴 권한과 설정이 일반 브라우저와 섞이지 않습니다. 로그: `%LOCALAPPDATA%\LaserTool\log.txt`.
+* 코드 서명이 없어 처음 실행 시 Windows SmartScreen 경고가 나오면 [추가 정보] → [실행].
+
 ## 주요 기능 (v0.1)
 
 | 분류 | 기능 |

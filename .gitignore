@@ -8,3 +8,5 @@ mcp-snapshot.png
 # 비밀 키
 .env.local
 .env.*.local
+build/
+release/
