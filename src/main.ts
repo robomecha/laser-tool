@@ -879,5 +879,21 @@ if (/^4781[0-3]$/.test(location.port)) {
   setInterval(ping, 5000);
 }
 
+// 소개 화면용 예제: ?demo=1|2|3 (&lang=ko|en)
+{
+  const q = new URLSearchParams(location.search);
+  const scene = Number(q.get('demo'));
+  if (scene) {
+    const lang = q.get('lang');
+    if (lang === 'ko' || lang === 'en') {
+      setLang(lang);
+      langSel.value = lang;
+    }
+    void import('./demo').then((m) =>
+      m.runDemo({ doc, view, textTool, chat, run: (c) => commands[c]?.() }, scene).then(() => document.body.setAttribute('data-demo-ready', '')),
+    );
+  }
+}
+
 // 디버깅용
 (window as unknown as { laser: unknown }).laser = { doc, view, grbl, ruida, layerColor };

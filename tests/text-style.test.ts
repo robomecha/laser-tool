@@ -46,6 +46,12 @@ describe('text on path', () => {
     expect(b.minY).toBeGreaterThan(-41);
   });
 
+  it('reverse keeps the position: 25% + reverse sits at the bottom of a circle', () => {
+    const circle = ellipsePolyline(0, 0, 40, 40);
+    const b = bboxOfPolylines(textOnPath(font, 'ABCD', circle, { size: 10, position: 25, side: 'below', reverse: true }));
+    expect(b.minY).toBeGreaterThan(25);
+  });
+
   it('drops glyphs beyond an open path end', () => {
     const line: Polyline = { pts: [{ x: 0, y: 0 }, { x: 20, y: 0 }], closed: false };
     const full = textOnPath(font, 'ABCDEFGHIJ', line, { size: 10, position: 50 });

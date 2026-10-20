@@ -89,7 +89,9 @@ export function textOnPath(font: GlyphFont, text: string, path: Polyline, o: Tex
   const adv = chars.map((c) => font.getAdvanceWidth(c, size) + spacing);
   const total = adv.reduce((a, b) => a + b, 0) - spacing;
   const sp = sampler(path, o.reverse ?? false);
-  const center = ((o.position ?? 50) / 100) * sp.length;
+  // 위치(%)는 항상 원래 경로 기준: 방향을 뒤집어도 같은 자리에 놓인다
+  const pos = (o.position ?? 50) / 100;
+  const center = (o.reverse ? 1 - pos : pos) * sp.length;
   // 아래쪽: 글자 윗부분이 경로에 닿도록 기준선을 글자 높이만큼 내린다
   const baseShift = (o.side === 'below' ? size * 0.75 : 0) + (o.side === 'below' ? 1 : -1) * (o.offset ?? 0);
   const out: Polyline[] = [];

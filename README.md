@@ -5,6 +5,12 @@ LightBurn / RDWorks V8 스타일의 레이저 커팅·각인 소프트웨어 (Ty
 벡터 도면과 이미지를 배치하고, **색상 레이어마다 가공 방식(라인/채우기/이미지)과 속도·출력을 지정**한 뒤
 경로를 미리보기하고 **GRBL 레이저로 바로 전송**하거나 **G-code / Ruida(.rd) 파일로 내보냅니다.**
 
+| 편집 | 가공 미리보기 | AI 대화 |
+| --- | --- | --- |
+| ![편집 화면](docs/images/screen-1.png) | ![가공 미리보기](docs/images/screen-2.png) | ![AI 대화](docs/images/screen-3.png) |
+
+> 화면 이미지는 개발 서버를 띄운 뒤 `node tools/screenshots.mjs` 로 다시 만들 수 있습니다 (`?demo=1|2|3` 예제).
+
 ## 실행
 
 ```bash

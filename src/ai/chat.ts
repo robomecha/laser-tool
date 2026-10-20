@@ -90,6 +90,11 @@ export class ChatPanel {
     this.abort?.abort();
   }
 
+  /** 대화 기록에 메시지 하나 표시 (예제 화면용 – 대화 내용에는 넣지 않음) */
+  showMessage(cls: string, text: string): HTMLElement {
+    return this.add(cls, text);
+  }
+
   private add(cls: string, text: string): HTMLElement {
     const el = document.createElement('div');
     el.className = `msg ${cls}`;
