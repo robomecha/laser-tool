@@ -14,3 +14,7 @@ release-*/
 
 # 블로그 글 (로컬 보관용, git 에 올리지 않음)
 docs/blog/
+
+# 이 프로젝트와 관계없는 로컬 폴더
+desk_design/
+.codex/
