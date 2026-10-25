@@ -170,7 +170,8 @@ export class CanvasView {
     const h = this.canvas.clientHeight;
     const bw = Math.max(1, b.maxX - b.minX);
     const bh = Math.max(1, b.maxY - b.minY);
-    this.zoom = Math.min((w - 60) / bw, (h - 60) / bh);
+    // 창 크기가 아직 0 이면(숨겨진 탭 등) 음수 배율이 되지 않게 최소값을 둔다
+    this.zoom = Math.max(0.05, Math.min((w - 60) / bw, (h - 60) / bh));
     this.panX = (w - bw * this.zoom) / 2 - b.minX * this.zoom;
     this.panY = (h - bh * this.zoom) / 2 - b.minY * this.zoom;
     this.onZoom(this.zoom);
