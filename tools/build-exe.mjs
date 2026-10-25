@@ -76,7 +76,21 @@ writeFileSync(
 );
 writeFileSync(
   join(release, 'connect-claude.bat'),
-  ['@echo off', 'rem Connect Laser Tool to Claude Desktop (quit Claude Desktop first)', '"%~dp0LaserTool.exe" --register-mcp', ''].join('\r\n'),
+  [
+    '@echo off',
+    'chcp 65001 >nul',
+    'rem Connect Laser Tool to Claude Desktop (quit Claude Desktop first)',
+    'if not exist "%~dp0LaserTool.exe" (',
+    '  echo LaserTool.exe 를 찾을 수 없습니다.',
+    '  echo connect-claude.bat 을 LaserTool.exe 와 같은 폴더에 두고 다시 실행하세요.',
+    '  echo 현재 폴더: %~dp0',
+    '  pause',
+    '  exit /b 1',
+    ')',
+    'echo Claude Desktop 에 연결하는 중... 잠시 후 결과 창이 뜹니다.',
+    '"%~dp0LaserTool.exe" --register-mcp',
+    '',
+  ].join('\r\n'),
 );
 writeFileSync(
   join(release, 'README.txt'),
