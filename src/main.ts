@@ -840,7 +840,14 @@ commands['edit-text'] = () => {
   if (!s) return status('수정할 텍스트를 하나 선택하세요 (텍스트를 더블클릭해도 됩니다)');
   editText(s);
 };
-commands.chat = () => chat.toggle();
+/** 웹 버전(GitHub Pages): 서버가 없어 앱 안 대화창 대신 MCP(사용자 본인의 Claude) 를 쓴다 */
+const IS_WEB = import.meta.env.VITE_WEB === '1';
+if (IS_WEB) $('btn-chat').hidden = true;
+commands.chat = () => {
+  if (!IS_WEB) return chat.toggle();
+  status(t('웹 버전에서는 Claude Desktop 에 laser-tool MCP 를 연결해서 AI 로 그립니다 (도움말 → AI 로 그리기)'), true);
+  help.open('ai');
+};
 const help = new HelpDialog();
 commands.help = () => help.open();
 const langSel = $<HTMLSelectElement>('lang-select');

@@ -426,4 +426,7 @@ export const EN: Record<string, string> = {
   // ---- 장비 기본값 ----
   '기본값으로': 'Defaults',
   '기본값(Ruida, 600×500mm, 원점 오른쪽 위)으로 채우기 – [저장] 을 눌러야 적용': 'Fill in the defaults (Ruida, 600×500mm, origin top-right) – press [Save] to apply',
+
+  // ---- 웹 버전 ----
+  '웹 버전에서는 Claude Desktop 에 laser-tool MCP 를 연결해서 AI 로 그립니다 (도움말 → AI 로 그리기)': 'In the web version, connect the laser-tool MCP to Claude Desktop to draw with AI (Help → Drawing with AI)',
 };

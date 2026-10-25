@@ -216,8 +216,46 @@ async function main(): Promise<void> {
   throw new Error(`사용할 수 있는 포트가 없습니다 (${PORTS.join(', ')})`);
 }
 
-main().catch((e) => {
+// ---------------- MCP 모드 (LaserTool.exe --mcp) ----------------
+//
+// Claude Desktop 등 MCP 클라이언트가 이 모드로 실행한다 (stdio). 앱이 꺼져 있으면 exe 를 일반 모드로 띄운다.
+// AI 사용량은 그 사용자의 MCP 클라이언트(구독)에서 나간다.
+
+async function runningPort(): Promise<number | null> {
+  for (const port of PORTS) if (await isOurs(port)) return port;
+  return null;
+}
+
+function launchApp(): void {
+  // 일반 모드 exe: 이미 실행 중이면 창만 하나 더 연다
+  const args = sea ? [] : [process.argv[1]];
+  spawn(process.execPath, args, { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+}
+
+async function mcpMain(): Promise<void> {
+  log('MCP 모드 시작');
+  const { runMcp } = await import('./mcp.ts');
+  await runMcp({
+    url: `http://localhost:${PORTS[0]}/`,
+    async ensure() {
+      if (await runningPort()) return 'running';
+      launchApp();
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        if (await runningPort()) return 'started';
+      }
+      throw new Error('Laser Tool 앱을 시작하지 못했습니다');
+    },
+    open: launchApp,
+  });
+}
+
+(process.argv.includes('--mcp') ? mcpMain() : main()).catch((e) => {
   log(`오류: ${(e as Error).stack ?? e}`);
+  if (process.argv.includes('--mcp')) {
+    console.error(`[laser-mcp] ${(e as Error).message}`);
+    process.exit(1);
+  }
   alertBox(`Laser Tool 을 시작하지 못했습니다:\n${(e as Error).message}\n\n로그: ${logFile}`);
   setTimeout(() => process.exit(1), 3000);
 });
