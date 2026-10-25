@@ -127,13 +127,21 @@ const SECTIONS: Section[] = [
     title: { ko: 'AI 로 그리기', en: 'Drawing with AI' },
     body: {
       ko: `<ul>
-<li><b>💬 AI 대화</b> ${kbd('C')}: 말로 요청하면 Claude 가 그리고 결과를 확인합니다. 프로젝트 폴더의 <code>.env.local</code> 에 <code>ANTHROPIC_API_KEY</code> 가 필요합니다 (API 사용량 요금).</li>
-<li><b>키 없이</b>: Claude Desktop 채팅에서 “laser-tool 로 … 만들어 줘” 라고 요청하세요. 상단 <b>🤖 AI 연결</b> 이 켜져 있으면 이 화면에 바로 그려집니다.</li>
+<li><b>Claude Desktop 으로 그리기 (추천, API 키 불필요)</b>: 사용자 본인의 Claude 구독으로 동작합니다.
+<ol><li>Claude Desktop 을 완전히 종료(트레이 → 종료)</li>
+<li>exe 폴더의 <b>connect-claude.bat</b> 더블클릭 (소스 사용자는 <code>npm run mcp:register</code>)</li>
+<li>Claude Desktop 실행 → 채팅에서 “laser-tool 로 … 만들어 줘”. 앱이 꺼져 있으면 자동으로 열리고, 상단 <b>🤖 AI 연결</b> 이 켜진 화면에 그려집니다.</li></ol></li>
+<li><b>웹 버전</b>(robomecha.github.io/laser-tool)에서도 같은 방법으로 됩니다. 처음 연결할 때 Chrome 이 <b>“로컬 네트워크 액세스”</b> 권한을 물으면 허용하세요 (안 되면 주소창 왼쪽 사이트 정보 → 사이트 설정 → 로컬 네트워크 액세스 → 허용 → 새로고침).</li>
+<li><b>💬 AI 대화</b> ${kbd('C')} (exe·개발 버전): 앱 안 대화창. <code>ANTHROPIC_API_KEY</code> 가 필요합니다 (API 사용량 요금).</li>
 <li>AI 는 그리기·설정만 하고 레이저 시작은 하지 않습니다. 미리보기로 확인한 뒤 직접 시작하세요.</li>
 </ul>`,
       en: `<ul>
-<li><b>💬 AI chat</b> ${kbd('C')}: describe what you want and Claude draws it and checks the result. Needs <code>ANTHROPIC_API_KEY</code> in <code>.env.local</code> in the project folder (billed per API use).</li>
-<li><b>Without a key</b>: ask in Claude Desktop, e.g. “use laser-tool to make …”. With <b>🤖 AI link</b> on, it draws straight onto this screen.</li>
+<li><b>Draw from Claude Desktop (recommended, no API key)</b>: runs on your own Claude subscription.
+<ol><li>Quit Claude Desktop completely (tray → Quit)</li>
+<li>Double-click <b>connect-claude.bat</b> next to the exe (from source: <code>npm run mcp:register</code>)</li>
+<li>Start Claude Desktop and ask, e.g. “use laser-tool to make …”. The app opens automatically if needed and draws on the screen with <b>🤖 AI link</b> on.</li></ol></li>
+<li>The <b>web version</b> (robomecha.github.io/laser-tool) works the same way. When Chrome asks for <b>local network access</b> the first time, allow it (or site info left of the address bar → Site settings → Local network access → Allow → reload).</li>
+<li><b>💬 AI chat</b> ${kbd('C')} (exe / dev build): in-app chat. Needs <code>ANTHROPIC_API_KEY</code> (billed per API use).</li>
 <li>AI only draws and sets layers; it never starts the laser. Check the preview and start it yourself.</li>
 </ul>`,
     },

@@ -75,6 +75,10 @@ writeFileSync(
   '# 앱 안 AI 대화창을 쓰려면 이 파일 이름을 laser-tool.env 로 바꾸고 키를 넣으세요 (선택).\n# 키 없이도 프로그램은 모두 동작합니다.\nANTHROPIC_API_KEY=\n',
 );
 writeFileSync(
+  join(release, 'connect-claude.bat'),
+  ['@echo off', 'rem Connect Laser Tool to Claude Desktop (quit Claude Desktop first)', '"%~dp0LaserTool.exe" --register-mcp', ''].join('\r\n'),
+);
+writeFileSync(
   join(release, 'README.txt'),
   [
     'Laser Tool – 레이저 커팅·각인 소프트웨어',
@@ -85,8 +89,15 @@ writeFileSync(
     '처음 실행 시 Windows 가 "PC 보호" 경고를 띄우면 [추가 정보] → [실행] 을 누르세요',
     '(코드 서명이 없는 프로그램이라 나오는 경고입니다).',
     '',
-    'AI 대화창(선택): laser-tool.env.example 을 laser-tool.env 로 이름을 바꾸고',
-    '                 ANTHROPIC_API_KEY=키 를 넣은 뒤 다시 실행하세요.',
+    'AI 로 그리기 (Claude Desktop, API 키 불필요):',
+    '  1. Claude Desktop 을 완전히 종료(트레이 아이콘 → 종료)',
+    '  2. connect-claude.bat 더블클릭 → "연결했습니다" 확인',
+    '  3. Claude Desktop 실행 → 채팅에서 "laser-tool 로 원형 코스터 만들어 줘"',
+    '',
+    '웹 버전: https://robomecha.github.io/laser-tool/ (Chrome/Edge)',
+    '',
+    '앱 안 AI 대화창(선택): laser-tool.env.example 을 laser-tool.env 로 이름을 바꾸고',
+    '                      ANTHROPIC_API_KEY=키 를 넣은 뒤 다시 실행하세요.',
     '',
     '설정·로그 위치: %LOCALAPPDATA%\\LaserTool',
     '문의: mk1017sh@naver.com',

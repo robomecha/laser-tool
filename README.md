@@ -20,6 +20,11 @@ npm test           # 단위 테스트
 npm run build      # 타입 검사 + 배포용 빌드 (dist/)
 ```
 
+## 웹 버전
+
+👉 **https://robomecha.github.io/laser-tool/** – 설치 없이 Chrome·Edge 에서 바로 사용 (USB 레이저 연결, PC 글꼴 포함). `main` 에 푸시하면 GitHub Actions 가 자동으로 배포합니다 (`.github/workflows/pages.yml`).
+웹 버전에는 서버가 없어 앱 안 AI 대화창이 없고, AI 는 아래 MCP 방식(사용자 본인의 Claude)으로 씁니다.
+
 ## 실행 파일 (Windows exe)
 
 **바로 내려받기:** [LaserTool.exe](https://github.com/robomecha/laser-tool/releases/latest/download/LaserTool.exe) (Windows 10/11, 설치 없이 더블클릭) · [릴리스 목록](https://github.com/robomecha/laser-tool/releases)
@@ -35,6 +40,7 @@ npm run build:exe
 | 파일 | 설명 |
 | --- | --- |
 | `LaserTool.exe` | 더블클릭하면 Chrome(없으면 Edge) 앱 창으로 열립니다. 창을 모두 닫으면 종료됩니다. |
+| `connect-claude.bat` | Claude Desktop 에 MCP 연결 (Claude 를 끈 뒤 더블클릭) |
 | `laser-tool.env.example` | AI 대화창용 API 키 (선택) – `laser-tool.env` 로 이름을 바꾸고 키 입력 |
 | `README.txt` | 간단한 사용법 (한국어) |
 
@@ -109,6 +115,11 @@ npm run ruida:send -- project.rd 192.168.1.100
 * 도구 정의는 `src/ai/tool-defs.ts` 하나로 MCP 서버와 함께 씁니다.
 
 ## AI 로 그리기 (MCP)
+
+**exe 사용자 (가장 쉬움):** Claude Desktop 을 완전히 종료 → exe 폴더의 `connect-claude.bat` 더블클릭 → Claude Desktop 실행. (`LaserTool.exe --mcp` 가 MCP 서버로 등록됩니다. Node.js 불필요)
+웹 버전에서 쓸 때는 처음에 Chrome 의 "로컬 네트워크 액세스" 권한을 허용하세요.
+
+**소스 사용자:**
 
 Claude 같은 AI 가 MCP 도구로 작업대에 직접 도형·텍스트·SVG 를 그리고 레이어를 설정할 수 있습니다.
 

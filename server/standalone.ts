@@ -250,7 +250,18 @@ async function mcpMain(): Promise<void> {
   });
 }
 
-(process.argv.includes('--mcp') ? mcpMain() : main()).catch((e) => {
+// ---------------- Claude Desktop 연결 (LaserTool.exe --register-mcp, connect-claude.bat) ----------------
+
+async function registerMain(): Promise<void> {
+  const { registerMcp } = await import('./register.ts');
+  const r = registerMcp({ command: process.execPath, args: ['--mcp'] });
+  log(`Claude 연결: ${r.ok ? '성공' : '실패'}`);
+  alertBox(r.message);
+  setTimeout(() => process.exit(r.ok ? 0 : 1), 3000);
+}
+
+const mode = process.argv.includes('--mcp') ? mcpMain : process.argv.includes('--register-mcp') ? registerMain : main;
+mode().catch((e) => {
   log(`오류: ${(e as Error).stack ?? e}`);
   if (process.argv.includes('--mcp')) {
     console.error(`[laser-mcp] ${(e as Error).message}`);
